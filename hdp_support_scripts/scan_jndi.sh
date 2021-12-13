@@ -11,6 +11,12 @@
 
 set -eu -o pipefail
 
+shopt -s globstar
+shopt -s nullglob 
+
+pattern=JndiLookup.class
+good_pattern=ClassArbiter.class
+
 if ! command -v zipgrep &> /dev/null; then
 	echo "zipgrep not found. zipgrep is required to run this script."
 	exit 1
@@ -21,18 +27,17 @@ if ! command -v zgrep &> /dev/null; then
 	exit 1
 fi
 
-for targetdir in /usr/hdp/current /usr/lib /var/lib
+for targetdir in ${1:-/usr/hdp/current /usr/lib /var/lib}
 do
   echo "Running on '$targetdir'"
 
-  pattern=JndiLookup.class
-
-  shopt -s globstar
-
   for jarfile in $targetdir/**/*.{jar,tar}; do
 	if grep -q $pattern $jarfile; then
-		# Vulnerable class/es found
-		echo "Vulnerable class: JndiLookup.class found in '$jarfile'"
+		if grep -q $good_pattern $jarfile; then
+			echo "Fixed version of Log4j-core found in '$jarfile'"
+		else
+			echo "Vulnerable version of Log4j-core found in '$jarfile'"
+		fi
 	fi
   done
 
@@ -40,19 +45,30 @@ do
         rm -r -f /tmp/unzip_target
 	mkdir /tmp/unzip_target
 	set +e
-        unzip -qq $warfile -d /tmp/unzip_target
-        set -e
-	if grep -r -q $pattern /tmp/unzip_target; then
-		# Vulnerable class/es found
-		echo "Vulnerable class: JndiLookup.class found in '$warfile'"
+	unzip -qq $warfile -d /tmp/unzip_target
+	set -e
+	
+	found_vuln=0
+	for f in $(grep -r -l $pattern /tmp/unzip_target); do
+		if ! grep -q $good_pattern $f; then
+			found_vuln=1
+		fi
+	done
+	if [ $found_vuln -eq 0 ]; then
+		echo "Fixed version of Log4j-core found in '$warfile'"
+	else
+		echo "Vulnerable version of Log4j-core found in '$warfile'"
 	fi
-        rm -r -f /tmp/unzip_target
+    rm -r -f /tmp/unzip_target
   done
 
   for tarfile in $targetdir/**/*.{tar.gz,tgz}; do
 	if zgrep -q $pattern $tarfile; then
-		# Vulnerable class/es found
-		echo "Vulnerable class: JndiLookup.class found in '$tarfile'"
+		if zgrep -q $good_pattern $tarfile; then
+			echo "Fixed version of Log4j-core found in '$jarfile'"
+		else
+			echo "Vulnerable version of Log4j-core found in '$jarfile'"
+		fi
 	fi
   done
 done
