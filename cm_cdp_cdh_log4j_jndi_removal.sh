@@ -185,8 +185,13 @@ function delete_jndi_from_hdfs {
   hdfs dfs -test -e $hdfs_path
   ret_status=$?
   if [ $ret_status -eq 1 ]; then
-    echo "Tar ball is not available in $hdfs_path. Exiting gracefully"
-    exit 0
+    if [ $file_type ==  "tez" ]; then
+      echo "Tar ball is not available in $hdfs_path. Tez is not installed."
+      return
+    else
+      echo "Tar ball is not available in $hdfs_path. Exiting gracefully"
+      exit 0
+    fi
   fi
 
   hdfs_file_path=$(hdfs dfs -ls $hdfs_path | tail -1  | awk '{print $8}')
@@ -196,14 +201,14 @@ function delete_jndi_from_hdfs {
     exit 0
   fi
 
-  hdfs_lock_path="/user/upgrade-lock"
+  hdfs_lock_path="/user/upgrade-lock_${file_type}"
   hdfs dfs -test -e $hdfs_lock_path
   ret_status=$?
   if [ $ret_status -eq 1 ]; then
     hdfs dfs -touch $hdfs_lock_path
   else
-    echo "Tar balls in HDFS are already upgraded. Exiting."
-    exit 0
+    echo "Tar ball for $file_type in HDFS is already upgraded."
+    return 0
   fi
 
   current_time=$(date "+%Y.%m.%d-%H.%M.%S")
