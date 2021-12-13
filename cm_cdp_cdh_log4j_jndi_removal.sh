@@ -11,17 +11,17 @@
 
 function scan_for_jndi {
   if ! command -v zipgrep &> /dev/null; then
-    echo "zipgrep not found. zipgrep is required to run this script."
+    echo $(date -R) "zipgrep not found. zipgrep is required to run this script."
     exit 1
   fi
 
   if ! command -v zgrep &> /dev/null; then
-    echo "zgrep not found. zgrep is required to run this script."
+    echo $(date -R) "zgrep not found. zgrep is required to run this script."
     exit 1
   fi
 
   targetdir=${1:-/opt/cloudera}
-  echo "Running on '$targetdir'"
+  echo $(date -R) "Running on '$targetdir'"
 
   pattern=JndiLookup.class
 
@@ -30,25 +30,25 @@ function scan_for_jndi {
   for jarfile in $targetdir/**/*.{jar,tar}; do
     if grep -q $pattern $jarfile; then
       # Vulnerable class/es found
-      echo "Vulnerable class: JndiLookup.class found in '$jarfile'"
+      echo $(date -R) "Vulnerable class: JndiLookup.class found in '$jarfile'"
     fi
   done
 
   for warfile in $targetdir/**/*.war; do
     if zipgrep -q $pattern $warfile; then
       # Vulnerable class/es found
-      echo "Vulnerable class: JndiLookup.class found in '$warfile'"
+      echo $(date -R) "Vulnerable class: JndiLookup.class found in '$warfile'"
     fi
   done
 
   for tarfile in $targetdir/**/*.{tar.gz,tgz}; do
     if zgrep -q $pattern $tarfile; then
       # Vulnerable class/es found
-      echo "Vulnerable class: JndiLookup.class found in '$tarfile'"
+      echo $(date -R) "Vulnerable class: JndiLookup.class found in '$tarfile'"
     fi
   done
 
-  echo "Scan complete"
+  echo $(date -R) "Scan complete"
 
 }
 
@@ -56,16 +56,16 @@ function scan_for_jndi {
 function delete_jndi_from_jar_files {
 
   if ! command -v zip &> /dev/null; then
-    echo "zip not found. zip is required to run this script."
+    echo $(date -R) "zip not found. zip is required to run this script."
     exit 1
   fi
 
   targetdir=${1:-/opt/cloudera}
-  echo "Running on '$targetdir'"
+  echo $(date -R) "Running on '$targetdir'"
 
   backupdir=${2:-/opt/cloudera/log4shell-backup}
   mkdir -p "$backupdir"
-  echo "Backing up files to '$backupdir'"
+  echo $(date -R) "Backing up files to '$backupdir'"
 
   shopt -s globstar
   for jarfile in $targetdir/**/*.jar; do
@@ -74,17 +74,17 @@ function delete_jndi_from_jar_files {
       mkdir -p "$backupdir/$(dirname $jarfile)"
       targetbackup="$backupdir/$jarfile.backup"
       if [ ! -f "$targetbackup" ]; then
-        echo "Backing up to '$targetbackup'"
+        echo $(date -R) "Backing up to '$targetbackup'"
         cp -f "$jarfile" "$targetbackup"
       fi
 
       # Rip out class
-      echo "Deleting JndiLookup.class from '$jarfile'"
+      echo $(date -R) "Deleting JndiLookup.class from '$jarfile'"
       zip -q -d "$jarfile" \*/JndiLookup.class
     fi
   done
 
-  echo "Completed removing JNDI from jar files"
+  echo $(date -R) "Completed removing JNDI from jar files"
 
 }
 
@@ -92,7 +92,7 @@ function delete_jndi_from_targz_file {
 
   tarfile=$1
   if [ ! -f "$tarfile" ]; then
-    echo "Tar file '$tarfile' not found"
+    echo $(date -R) "Tar file '$tarfile' not found"
     exit 1
   fi
 
@@ -100,11 +100,11 @@ function delete_jndi_from_targz_file {
   mkdir -p "$backupdir/$(dirname $tarfile)"
   targetbackup="$backupdir/$tarfile.backup"
   if [ ! -f "$targetbackup" ]; then
-    echo "Backing up to '$targetbackup'"
+    echo $(date -R) "Backing up to '$targetbackup'"
     cp -f "$tarfile" "$targetbackup"
   fi
 
-  echo "Patching '$tarfile'"
+  echo $(date -R) "Patching '$tarfile'"
   tempfile=$(mktemp)
   tempdir=$(mktemp -d)
   tempbackupdir=$(mktemp -d)
@@ -112,7 +112,7 @@ function delete_jndi_from_targz_file {
   tar xf "$tarfile" -C "$tempdir"
   delete_jndi_from_jar_files "$tempdir" "$tempbackupdir"
 
-  echo "Recompressing"
+  echo $(date -R) "Recompressing"
   (cd "$tempdir" && tar czf "$tempfile" --owner=1000 --group=100 .)
 
   # Restore old permissions before replacing original
@@ -125,7 +125,7 @@ function delete_jndi_from_targz_file {
   rm -rf $tempdir
   rm -rf $tempbackupdir
 
-  echo "Completed removing JNDI from $tarfile"
+  echo $(date -R) "Completed removing JNDI from $tarfile"
 
 }
 
@@ -137,7 +137,7 @@ function delete_jndi_from_hdfs {
   issecure="true"
 
   if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
-        echo "Invalid arguments. Please choose 'mr' or 'tez' along with optional tar ball path."
+        echo $(date -R) "Invalid arguments. Please choose 'mr' or 'tez' along with optional tar ball path."
     exit 1
   fi
 
@@ -157,23 +157,23 @@ function delete_jndi_from_hdfs {
     hdfs_path=$external_hdfs_path
     username="yarn"
   else
-    echo "Invalid arguments. Please choose 'mr' or 'tez' along with optional tar ball path."
+    echo $(date -R) "Invalid arguments. Please choose 'mr' or 'tez' along with optional tar ball path."
     exit 1
   fi
 
   keytab_file="hdfs.keytab"
   keytab=$(find /var/run/cloudera-scm-agent/process/ -type f -iname $keytab_file | grep -e NAMENODE -e DATANODE | tail -1)
   if [ -z "$keytab" ]; then
-    echo "Keytab file not found: $keytab_file. Considering this as a non-secure cluster deployment."
+    echo $(date -R) "Keytab file not found: $keytab_file. Considering this as a non-secure cluster deployment."
     issecure="false"
   fi
 
   if [ $issecure == "true" ]; then
-    echo "Using $keytab to access HDFS"
+    echo $(date -R) "Using $keytab to access HDFS"
 
     principal=$(klist -kt $keytab | grep -v HTTP | tail -1 | awk '{print $4}')
     if [ -z "$principal" ]; then
-      echo "principal not found: $principal"
+      echo $(date -R) "principal not found: $principal"
       exit 0
     fi
     kinit -kt $keytab $principal
@@ -186,10 +186,10 @@ function delete_jndi_from_hdfs {
   ret_status=$?
   if [ $ret_status -eq 1 ]; then
     if [ $file_type ==  "tez" ]; then
-      echo "Tar ball is not available in $hdfs_path. Tez is not installed."
+      echo $(date -R) "Tar ball is not available in $hdfs_path. Tez is not installed."
       return
     else
-      echo "Tar ball is not available in $hdfs_path. Exiting gracefully"
+      echo $(date -R) "Tar ball is not available in $hdfs_path. Exiting gracefully"
       exit 0
     fi
   fi
@@ -197,7 +197,7 @@ function delete_jndi_from_hdfs {
   hdfs_file_path=$(hdfs dfs -ls $hdfs_path | tail -1  | awk '{print $8}')
 
   if [[ ! $hdfs_file_path == *.tar.gz ]]; then
-    echo "Desired tar ball path was not found in HDFS. Exiting."
+    echo $(date -R) "Desired tar ball path was not found in HDFS. Exiting."
     exit 0
   fi
 
@@ -207,38 +207,38 @@ function delete_jndi_from_hdfs {
   if [ $ret_status -eq 1 ]; then
     hdfs dfs -touch $hdfs_lock_path
   else
-    echo "Tar ball for $file_type in HDFS is already upgraded."
+    echo $(date -R) "Tar ball for $file_type in HDFS is already upgraded."
     return 0
   fi
 
   current_time=$(date "+%Y.%m.%d-%H.%M.%S")
-  echo "Current Time : $current_time"
+  echo $(date -R) "Current Time : $current_time"
 
   local_path="/tmp/hdfs_tar_files.${current_time}"
   mkdir -p $local_path
 
-  echo "Downloading tar ball from HDFS path $hdfs_file_path to $local_path"
-  echo "Printing current HDFS file stats"
+  echo $(date -R) "Downloading tar ball from HDFS path $hdfs_file_path to $local_path"
+  echo $(date -R) "Printing current HDFS file stats"
   hdfs dfs -ls $hdfs_file_path
   hdfs dfs -get -f $hdfs_file_path $local_path
 
   hdfs_bc_path="/tmp/backup.${current_time}"
 
-  echo "Taking a backup of HDFS dir $hdfs_file_path to $hdfs_bc_path"
+  echo $(date -R) "Taking a backup of HDFS dir $hdfs_file_path to $hdfs_bc_path"
   hdfs dfs -mkdir -p $hdfs_bc_path
   hdfs dfs -cp -f  $hdfs_file_path $hdfs_bc_path
 
   out="$(basename $local_path/*)"
   local_full_path="${local_path}/${out}"
 
-  echo "Executing the log4j removal script"
+  echo $(date -R) "Executing the log4j removal script"
   delete_jndi_from_targz_file $local_full_path
 
-  echo "Completed executing log4j removal script and uploading $out to $hdfs_file_path"
+  echo $(date -R) "Completed executing log4j removal script and uploading $out to $hdfs_file_path"
   hdfs dfs -copyFromLocal -f $local_full_path $hdfs_file_path
   hdfs dfs -chown $username $hdfs_file_path
 
-  echo "Printing updated HDFS file stats"
+  echo $(date -R) "Printing updated HDFS file stats"
   hdfs dfs -ls $hdfs_file_path
 
   if [ $issecure == "true" ]; then
@@ -263,32 +263,32 @@ targetdir=${1:-/opt/cloudera}
 backupdir=${2:-/opt/cloudera/log4shell-backup}
 
 if [ -z "$SKIP_JAR" ]; then
-  echo "Removing JNDI from jar files"
+  echo $(date -R) "Removing JNDI from jar files"
   delete_jndi_from_jar_files $targetdir $backupdir
 else
-  echo "Skipped patching .jar"
+  echo $(date -R) "Skipped patching .jar"
 fi
 
 if [ -z "$SKIP_TGZ" ]; then
-  echo "Removing JNDI from tar.gz files"
+  echo $(date -R) "Removing JNDI from tar.gz files"
   for targzfile in $(find $targetdir -name '*.tar.gz') ; do
     delete_jndi_from_targz_file $targzfile $backupdir
   done
 else
-  echo "Skipped patching .tar.gz"
+  echo $(date -R) "Skipped patching .tar.gz"
 fi
 
 if [ -z "$SKIP_HDFS" ]; then
   if ps -efww | grep org.apache.hadoop.hdfs.server.namenode.NameNode | grep -v grep  1>/dev/null 2>&1; then
-    echo "Found an HDFS namenode on this host, removing JNDI from HDFS tar.gz files"
+    echo $(date -R) "Found an HDFS namenode on this host, removing JNDI from HDFS tar.gz files"
     delete_jndi_from_hdfs tez
     delete_jndi_from_hdfs mr
   fi
 else
-  echo "Skipped patching .tar.gz in HDFS"
+  echo $(date -R) "Skipped patching .tar.gz in HDFS"
 fi
 
 if [ -n "$RUN_SCAN" ]; then
-  echo "Running scan for missed JndiLookup classes. This may take a while."
+  echo $(date -R) "Running scan for missed JndiLookup classes. This may take a while."
   scan_for_jndi $targetdir
 fi

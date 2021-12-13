@@ -12,18 +12,18 @@
 set -eu -o pipefail
 
 if ! command -v zipgrep &> /dev/null; then
-	echo "zipgrep not found. zipgrep is required to run this script."
+	echo $(date -R) "zipgrep not found. zipgrep is required to run this script."
 	exit 1
 fi
 
 if ! command -v zgrep &> /dev/null; then
-	echo "zgrep not found. zgrep is required to run this script."
+	echo $(date -R) "zgrep not found. zgrep is required to run this script."
 	exit 1
 fi
 
 for targetdir in /usr/hdp/current /usr/lib /var/lib
 do
-  echo "Running on '$targetdir'"
+  echo $(date -R) "Running on '$targetdir'"
 
   pattern=JndiLookup.class
 
@@ -32,7 +32,7 @@ do
   for jarfile in $targetdir/**/*.{jar,tar}; do
 	if grep -q $pattern $jarfile; then
 		# Vulnerable class/es found
-		echo "Vulnerable class: JndiLookup.class found in '$jarfile'"
+		echo $(date -R) "Vulnerable class: JndiLookup.class found in '$jarfile'"
 	fi
   done
 
@@ -44,7 +44,7 @@ do
         set -e
 	if grep -r -q $pattern /tmp/unzip_target; then
 		# Vulnerable class/es found
-		echo "Vulnerable class: JndiLookup.class found in '$warfile'"
+		echo $(date -R) "Vulnerable class: JndiLookup.class found in '$warfile'"
 	fi
         rm -r -f /tmp/unzip_target
   done
@@ -52,9 +52,9 @@ do
   for tarfile in $targetdir/**/*.{tar.gz,tgz}; do
 	if zgrep -q $pattern $tarfile; then
 		# Vulnerable class/es found
-		echo "Vulnerable class: JndiLookup.class found in '$tarfile'"
+		echo $(date -R) "Vulnerable class: JndiLookup.class found in '$tarfile'"
 	fi
   done
 done
 
-echo "Scan complete"
+echo $(date -R) "Scan complete"

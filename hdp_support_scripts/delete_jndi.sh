@@ -15,17 +15,17 @@ shopt -s globstar
 shopt -s nullglob 
 
 if ! command -v zip &> /dev/null; then
-	echo "zip not found. zip is required to run this script."
+	echo $(date -R) "zip not found. zip is required to run this script."
 	exit 1
 fi
 
 for targetdir in ${1:-/usr/hdp/current /usr/lib /var/lib}
 do
-  echo "Running on '$targetdir'"
+  echo $(date -R) "Running on '$targetdir'"
 
   backupdir=${2:-/opt/cloudera/log4shell-backup}
   mkdir -p "$backupdir"
-  echo "Backing up files to '$backupdir'"
+  echo $(date -R) "Backing up files to '$backupdir'"
 
   for jarfile in $targetdir/**/*.jar; do
 	if grep -q JndiLookup.class $jarfile; then
@@ -33,12 +33,12 @@ do
 		mkdir -p "$backupdir/$(dirname $jarfile)"
 		targetbackup="$backupdir/$jarfile.backup"
 		if [ ! -f "$targetbackup" ]; then
-			echo "Backing up to '$targetbackup'"
+			echo $(date -R) "Backing up to '$targetbackup'"
 			cp -f "$jarfile" "$targetbackup"
 		fi
 
 		# Rip out class
-		echo "Deleting JndiLookup.class from '$jarfile'"
+		echo $(date -R) "Deleting JndiLookup.class from '$jarfile'"
 		zip -q -d "$jarfile" \*/JndiLookup.class
 	fi
   done
@@ -57,19 +57,19 @@ do
 			mkdir -p "$backupdir/$(dirname $jarfile)"
 			targetbackup="$backupdir/$jarfile.backup"
 			if [ ! -f "$targetbackup" ]; then
-				echo "Backing up to '$targetbackup'"
+				echo $(date -R) "Backing up to '$targetbackup'"
 				cp -f "$jarfile" "$targetbackup"
 			fi
 
 			# Rip out class
-			echo "Deleting JndiLookup.class from '$jarfile'"
+			echo $(date -R) "Deleting JndiLookup.class from '$jarfile'"
 			zip -q -d "$jarfile" \*/JndiLookup.class
 			doZip=1
 		fi
 	  done
 
 	if [ 1 -eq $doZip ]; then
-	  echo "Updating '$warfile'"
+	  echo $(date -R) "Updating '$warfile'"
 	  pushd /tmp/unzip_target
 	  zip -r -q $warfile .
 	  popd
@@ -79,5 +79,5 @@ do
   done
 done
 
-echo "Run successful"
+echo $(date -R) "Run successful"
 

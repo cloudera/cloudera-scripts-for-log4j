@@ -10,11 +10,11 @@
 # --------------------------------------------------------------------------------------
 
 BASEDIR=$(dirname "$0")
-echo $BASEDIR
+echo $(date -R) $BASEDIR
 
 $BASEDIR/hdp_support_scripts/delete_jndi.sh
 if ps -efww | grep org.apache.hadoop.hdfs.server.namenode.NameNode | grep -v grep  1>/dev/null 2>&1; then
-	echo "Found an HDFS namenode on this host, removing JNDI from HDFS tar.gz files"
+	echo $(date -R) "Found an HDFS namenode on this host, removing JNDI from HDFS tar.gz files"
 	$BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/hdp/apps/"
 	$BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/user/"
 fi

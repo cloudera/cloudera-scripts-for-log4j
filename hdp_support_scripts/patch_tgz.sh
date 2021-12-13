@@ -15,13 +15,13 @@ BASEDIR=$(dirname "$0")
 
 delete_jndi=$BASEDIR/delete_jndi.sh
 if [ ! -f "$delete_jndi" ]; then
-	echo "Patch script not found: $delete_jndi"
+	echo $(date -R) "Patch script not found: $delete_jndi"
 	exit 1
 fi
 
 tarfile=$1
 if [ ! -f "$tarfile" ]; then
-	echo "Tar file '$tarfile' not found"
+	echo $(date -R) "Tar file '$tarfile' not found"
 	exit 1
 fi
 
@@ -29,11 +29,11 @@ backupdir=${2:-/opt/cloudera/log4shell-backup}
 mkdir -p "$backupdir/$(dirname $tarfile)"
 targetbackup="$backupdir/$tarfile.backup"
 if [ ! -f "$targetbackup" ]; then
-	echo "Backing up to '$targetbackup'"
+	echo $(date -R) "Backing up to '$targetbackup'"
 	cp -f "$tarfile" "$targetbackup"
 fi
 
-echo "Patching '$tarfile'"
+echo $(date -R) "Patching '$tarfile'"
 tempfile=$(mktemp)
 tempdir=$(mktemp -d)
 tempbackupdir=$(mktemp -d)
@@ -41,7 +41,7 @@ tempbackupdir=$(mktemp -d)
 tar xf "$tarfile" -C "$tempdir"
 $delete_jndi "$tempdir" "$tempbackupdir"
 
-echo "Recompressing"
+echo $(date -R) "Recompressing"
 (cd "$tempdir" && tar czf "$tempfile" --owner=1000 --group=100 .)
 mv "$tempfile" "$tarfile"
 
@@ -49,4 +49,4 @@ rm -f $tempfile
 rm -rf $tempdir
 rm -rf $tempbackupdir
 
-echo "Patch successful"
+echo $(date -R) "Patch successful"

@@ -18,16 +18,16 @@ CDH_CDP_SCRIPT="$BASEDIR/cm_cdp_cdh_log4j_jndi_removal.sh"
 HDP_SCRIPT="$BASEDIR/hdp_log4j_jndi_removal.sh"
 
 log_info() {
-    echo "INFO : ${1}" 1>&2
+    echo $(date -R) "INFO : ${1}" 1>&2
 }
 
 log_error() {
     error="$1"
-    echo "ERROR: ${error}" 1>&2
+    echo $(date -R) "ERROR: ${error}" 1>&2
 }
 
 subcommand_usage() {
-    echo "Usage: $PROG (subcommand) [options]
+    echo $(date -R) "Usage: $PROG (subcommand) [options]
     Subcommands:
         help              Prints this message
         cdh               Scan a CDH cluster node
