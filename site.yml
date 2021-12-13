@@ -22,6 +22,8 @@
     log4j_patcher_script_args: "cdp -t /opt/cloudera"
     # If 'True', the scripts stdout&stderr are redirected to a log file (in the dir given by the var `log4j_patcher_log_dir`)
     script_redirect_stdout_to_file: False 
+    script_async_sec: 14400  # set max. allowed running time of script to 4h
+    script_poll_sec: 10      # set the poll time in seconds
     log4j_patcher_script_env:
       SKIP_JAR: ""     # If non-empty, skips scanning and patching .jar files
       SKIP_TGZ: ""     # If non-empty, skips scanning and patching .tar.gz files
@@ -63,8 +65,12 @@
 
       - name: run script {{ log4j_patcher_script_name }}
         shell: "./{{ log4j_patcher_script_name }} {{ log4j_patcher_script_args }} {{ run_cmd_postfix | default('') }}"
+        async: "{{ script_async_sec }}"  # Maximum allowed time in Seconds
+        poll: "{{ script_poll_sec }}"    # Polling Interval in Seconds
+        register: run_script_result
         args:
           chdir: "{{ log4j_patcher_install_dir }}"
         environment: "{{ log4j_patcher_script_env }}"
+      # Note: Alternatively we could run with poll=0 and add a `async_status` task here
       tags:
         - run
