@@ -48,74 +48,88 @@ fi
 
 kinit -kt $keytab $principal
 
-for hdfs_file_path in $(hdfs dfs -ls -R $hdfs_path | awk '{print $8}')
+for hdfs_file_path in $(hdfs dfs -ls -R $hdfs_path | awk 'BEGIN {LAST=""} {if (match($8,LAST"/")>0) { print LAST; } LAST=$8}')
 do
   echo $hdfs_file_path
 
-  if [[ $hdfs_file_path == *.tar.gz ]]; then
-	  current_time=$(date "+%Y.%m.%d-%H.%M.%S")
-	  echo "Current Time : $current_time"
+  current_time=$(date "+%Y.%m.%d-%H.%M.%S")
+  echo "Current Time : $current_time"
 
-	  local_path="/tmp/hdfs_tar_files.${current_time}"
-	  rm -r -f $local_path
-	  mkdir -p $local_path
+  local_path="/tmp/hdfs_tar_files.${current_time}"
+  
+  rm -r -f $local_path
+  mkdir -p $local_path
+  
+  set +e
+  hdfs dfs -get "${hdfs_file_path}/*.jar" $local_path
+  ec=$?
+  set -e
+  
+  if [ $ec -eq 0 ]; then
+      d="2020-01-01 10:22:32"
+	  touch -d "$d" $local_path/mark
+	  touch -d "$d" $local_path/*
+	  
+	  $delete_jndi $local_path
+	  
+	  changed=()
+	  for f in $(ls $local_path); do
+		if [ $local_path/$f -nt $local_path/mark ]; then
+		  changed+=($f)
+		fi
+	  done
+	  
+	  for f in ${changed[*]}; do
+		output=$(hdfs dfs -ls $hdfs_file_path/$f)
+		username=$(echo $output | awk '{print $3":"$4}')
+		permission=$(echo $output | awk '{print "u="gensub("-", "", "g", substr($1,2,3))",g="gensub("-", "", "g", substr($1,5,3))",o="gensub("-", "", "g", substr($1,8,3))}')
+	    hdfs dfs -copyFromLocal -f $local_path/$f $hdfs_file_path/$f
+		hdfs dfs -chown $username $hdfs_file_path/$f
+		hdfs dfs -chmod $permission $hdfs_file_path/$f
+	  done
+  else
+	echo "No files found. Skipping directory"
+  fi
 
-	  echo "Downloading tar ball from HDFS path $hdfs_file_path to $local_path"
-	  echo "Printing current HDFS file stats"
-	  hdfs dfs -ls $hdfs_file_path
-	  username=$(hdfs dfs -ls $hdfs_file_path | awk '{print $3":"$4}')
-	  hdfs dfs -get $hdfs_file_path $local_path
+  local_path="/tmp/hdfs_tar_files.${current_time}"
+  
+  rm -r -f $local_path
+  mkdir -p $local_path
+  
+  set +e
+  hdfs dfs -get "${hdfs_file_path}/*.tar.gz" $local_path
+  ec=$?
+  set -e
+  
+  if [ $ec -eq 0 ]; then
+		hdfs_bc_path="/tmp/backup.${current_time}"
 
-	  hdfs_bc_path="/tmp/backup.${current_time}"
+		echo "Taking a backup of HDFS dir $hdfs_file_path to $hdfs_bc_path"
+		hdfs dfs -mkdir -p $hdfs_bc_path
+		hdfs dfs -cp -f  $hdfs_file_path/*.tar.gz $hdfs_bc_path
+	
+		for f in $(ls $local_path); do
+			echo "Printing current HDFS file stats"
+			output=$(hdfs dfs -ls $hdfs_file_path/$f)
+			echo $output
+			username=$(echo $output | awk '{print $3":"$4}')
+			permission=$(echo $output | awk '{print "u="gensub("-", "", "g", substr($1,2,3))",g="gensub("-", "", "g", substr($1,5,3))",o="gensub("-", "", "g", substr($1,8,3))}')
 
-	  echo "Taking a backup of HDFS dir $hdfs_file_path to $hdfs_bc_path"
-	  hdfs dfs -mkdir -p $hdfs_bc_path
-	  hdfs dfs -cp -f  $hdfs_file_path $hdfs_bc_path
+			local_full_path="${local_path}/${f}"
 
-	  out="$(basename $local_path/*)"
-	  local_full_path="${local_path}/${out}"
+			echo "Executing the log4j removal script"
+			$patch_tgz $local_full_path
 
-	  echo "Executing the log4j removal script"
-	  $patch_tgz $local_full_path
+			echo "Completed executing log4j removal script and uploading $f to $hdfs_file_path"
+			hdfs dfs -copyFromLocal -f $local_full_path $hdfs_file_path/$f
+			hdfs dfs -chown $username $hdfs_file_path/$f
+			hdfs dfs -chmod $permission $hdfs_file_path/$f
 
-	  echo "Completed executing log4j removal script and uploading $out to $hdfs_file_path"
-	  hdfs dfs -copyFromLocal -f $local_full_path $hdfs_file_path
-	  hdfs dfs -chown $username $hdfs_file_path
-
-	  echo "Printing updated HDFS file stats"
-	  hdfs dfs -ls $hdfs_file_path
-  elif [[ $hdfs_file_path == *.jar ]]; then
-	  current_time=$(date "+%Y.%m.%d-%H.%M.%S")
-	  echo "Current Time : $current_time"
-
-	  local_path="/tmp/hdfs_tar_files.${current_time}"
-	  rm -r -f $local_path
-	  mkdir -p $local_path
-
-	  echo "Downloading tar ball from HDFS path $hdfs_file_path to $local_path"
-	  echo "Printing current HDFS file stats"
-	  hdfs dfs -ls $hdfs_file_path
-	  username=$(hdfs dfs -ls $hdfs_file_path | awk '{print $3":"$4}')
-	  hdfs dfs -get $hdfs_file_path $local_path
-
-	  hdfs_bc_path="/tmp/backup.${current_time}"
-
-	  echo "Taking a backup of HDFS dir $hdfs_file_path to $hdfs_bc_path"
-	  hdfs dfs -mkdir -p $hdfs_bc_path
-	  hdfs dfs -cp -f  $hdfs_file_path $hdfs_bc_path
-
-	  out="$(basename $local_path/*)"
-	  local_full_path="${local_path}/${out}"
-
-	  echo "Executing the log4j removal script"
-	  $delete_jndi $local_full_path
-
-	  echo "Completed executing log4j removal script and uploading $out to $hdfs_file_path"
-	  hdfs dfs -copyFromLocal -f $local_full_path $hdfs_file_path
-	  hdfs dfs -chown $username $hdfs_file_path
-
-	  echo "Printing updated HDFS file stats"
-	  hdfs dfs -ls $hdfs_file_path
+			echo "Printing updated HDFS file stats"
+			hdfs dfs -ls $hdfs_file_path/$f
+		done
+  else
+	echo "No files found. Skipping directory"
   fi
 done
 

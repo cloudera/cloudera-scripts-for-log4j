@@ -19,3 +19,8 @@ if ps -efww | grep org.apache.hadoop.hdfs.server.namenode.NameNode | grep -v gre
 	$BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/user/"
 fi
 
+if [ -n "$RUN_SCAN" ]; then
+  echo "Running scan for missed JndiLookup classes. This may take a while."
+  $BASEDIR/hdp_support_scripts/scan_jndi.sh
+fi
+

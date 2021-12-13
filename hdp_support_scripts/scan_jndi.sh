@@ -11,8 +11,14 @@
 
 set -eu -o pipefail
 
-if ! command -v zipgrep &> /dev/null; then
-	echo "zipgrep not found. zipgrep is required to run this script."
+shopt -s globstar
+shopt -s nullglob 
+
+pattern=JndiLookup.class
+good_pattern=ClassArbiter.class
+
+if ! command -v unzip &> /dev/null; then
+	echo "unzip not found. unzip is required to run this script."
 	exit 1
 fi
 
@@ -21,38 +27,49 @@ if ! command -v zgrep &> /dev/null; then
 	exit 1
 fi
 
-for targetdir in /usr/hdp/current /usr/lib /var/lib
+for targetdir in ${1:-/usr/hdp/current /usr/lib /var/lib}
 do
   echo "Running on '$targetdir'"
 
-  pattern=JndiLookup.class
-
-  shopt -s globstar
-
   for jarfile in $targetdir/**/*.{jar,tar}; do
 	if grep -q $pattern $jarfile; then
-		# Vulnerable class/es found
-		echo "Vulnerable class: JndiLookup.class found in '$jarfile'"
+		if grep -q $good_pattern $jarfile; then
+			echo "Fixed version of Log4j-core found in '$jarfile'"
+		else
+			echo "Vulnerable version of Log4j-core found in '$jarfile'"
+		fi
 	fi
   done
 
-  for warfile in $targetdir/**/*.war; do
+  for warfile in $targetdir/**/*.{war,nar}; do
         rm -r -f /tmp/unzip_target
 	mkdir /tmp/unzip_target
 	set +e
-        unzip -qq $warfile -d /tmp/unzip_target
-        set -e
-	if grep -r -q $pattern /tmp/unzip_target; then
-		# Vulnerable class/es found
-		echo "Vulnerable class: JndiLookup.class found in '$warfile'"
-	fi
-        rm -r -f /tmp/unzip_target
+	unzip -qq $warfile -d /tmp/unzip_target
+	set -e
+	
+    found=0  # not found
+    for f in $(grep -r -l $pattern /tmp/unzip_target); do
+      found=1  # found vulnerable class
+      if grep -q $good_pattern $f; then
+        found=2  # found fixed class
+      fi
+    done
+    if [ $found -eq 2 ]; then
+      echo "Fixed version of Log4j-core found in '$warfile'"
+    elif [ $found -eq 1 ]; then
+      echo "Vulnerable version of Log4j-core found in '$warfile'"
+    fi
+    rm -r -f /tmp/unzip_target
   done
 
   for tarfile in $targetdir/**/*.{tar.gz,tgz}; do
 	if zgrep -q $pattern $tarfile; then
-		# Vulnerable class/es found
-		echo "Vulnerable class: JndiLookup.class found in '$tarfile'"
+		if zgrep -q $good_pattern $tarfile; then
+			echo "Fixed version of Log4j-core found in '$tarfile'"
+		else
+			echo "Vulnerable version of Log4j-core found in '$tarfile'"
+		fi
 	fi
   done
 done

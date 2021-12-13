@@ -19,7 +19,7 @@ if ! command -v zip &> /dev/null; then
 	exit 1
 fi
 
-for targetdir in ${1:-/usr/hdp/current /usr/lib /var/lib}
+for targetdir in ${1:-/usr/hdp/current /usr/hdf/current /usr/lib /var/lib}
 do
   echo "Running on '$targetdir'"
 
@@ -43,7 +43,7 @@ do
 	fi
   done
   
-  for warfile in $targetdir/**/*.war; do
+  for warfile in $targetdir/**/*.{war,nar}; do
     doZip=0
   
     rm -r -f /tmp/unzip_target

@@ -10,8 +10,8 @@
 # --------------------------------------------------------------------------------------
 
 function scan_for_jndi {
-  if ! command -v zipgrep &> /dev/null; then
-    echo "zipgrep not found. zipgrep is required to run this script."
+  if ! command -v unzip &> /dev/null; then
+    echo "unzip not found. unzip is required to run this script."
     exit 1
   fi
 
@@ -24,27 +24,49 @@ function scan_for_jndi {
   echo "Running on '$targetdir'"
 
   pattern=JndiLookup.class
+  good_pattern=ClassArbiter.class
 
   shopt -s globstar
 
   for jarfile in $targetdir/**/*.{jar,tar}; do
     if grep -q $pattern $jarfile; then
-      # Vulnerable class/es found
-      echo "Vulnerable class: JndiLookup.class found in '$jarfile'"
+      if grep -q $good_pattern $jarfile; then
+        echo "Fixed version of Log4j-core found in '$jarfile'"
+      else
+        echo "Vulnerable version of Log4j-core found in '$jarfile'"
+      fi
     fi
   done
 
   for warfile in $targetdir/**/*.war; do
-    if zipgrep -q $pattern $warfile; then
-      # Vulnerable class/es found
-      echo "Vulnerable class: JndiLookup.class found in '$warfile'"
+    rm -r -f /tmp/unzip_target
+    mkdir /tmp/unzip_target
+    set +e
+    unzip -qq $warfile -d /tmp/unzip_target
+    set -e
+
+    found=0  # not found
+    for f in $(grep -r -l $pattern /tmp/unzip_target); do
+      found=1  # found vulnerable class
+      if grep -q $good_pattern $f; then
+        found=2  # found fixed class
+      fi
+    done
+    if [ $found -eq 2 ]; then
+      echo "Fixed version of Log4j-core found in '$warfile'"
+    elif [ $found -eq 1 ]; then
+      echo "Vulnerable version of Log4j-core found in '$warfile'"
     fi
+    rm -r -f /tmp/unzip_target
   done
 
   for tarfile in $targetdir/**/*.{tar.gz,tgz}; do
     if zgrep -q $pattern $tarfile; then
-      # Vulnerable class/es found
-      echo "Vulnerable class: JndiLookup.class found in '$tarfile'"
+      if zgrep -q $good_pattern $tarfile; then
+        echo "Fixed version of Log4j-core found in '$tarfile'"
+      else
+        echo "Vulnerable version of Log4j-core found in '$tarfile'"
+      fi
     fi
   done
 
@@ -163,8 +185,8 @@ function delete_jndi_from_hdfs {
 
   keytab_file="hdfs.keytab"
   keytab=$(find /var/run/cloudera-scm-agent/process/ -type f -iname $keytab_file | grep -e NAMENODE -e DATANODE | tail -1)
-  if [ -z "$keytab" ]; then
-    echo "Keytab file not found: $keytab_file. Considering this as a non-secure cluster deployment."
+  if [[ -z "$keytab" || ! -s $keytab ]]; then
+    echo "Keytab file is not found or is empty: $keytab_file. Considering this as a non-secure cluster deployment."
     issecure="false"
   fi
 
@@ -185,13 +207,8 @@ function delete_jndi_from_hdfs {
   hdfs dfs -test -e $hdfs_path
   ret_status=$?
   if [ $ret_status -eq 1 ]; then
-    if [ $file_type ==  "tez" ]; then
-      echo "Tar ball is not available in $hdfs_path. Tez is not installed."
-      return
-    else
-      echo "Tar ball is not available in $hdfs_path. Exiting gracefully"
-      exit 0
-    fi
+    echo "Tar ball is not available in $hdfs_path. $file_type is not installed."
+    return
   fi
 
   hdfs_file_path=$(hdfs dfs -ls $hdfs_path | tail -1  | awk '{print $8}')

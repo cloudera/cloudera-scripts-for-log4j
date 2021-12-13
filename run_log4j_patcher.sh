@@ -33,6 +33,7 @@ subcommand_usage() {
         cdh               Scan a CDH cluster node
         cdp               Scan a CDP cluster node
         hdp               Scan a HDP cluster node
+        hdf               Scan a HDF cluster node
 
     Options (cdh and cdp subcommands only):
         -t <targetdir>    Override target directory (default: distro-specific)
@@ -83,7 +84,7 @@ subcommand_cdh() {
 }
 
 subcommand_hdp() {
-    log_info "Running HDP patcher script: $HDP_SCRIPT"
+    log_info "Running HDP/HDF patcher script: $HDP_SCRIPT"
     logfile=$(mktemp output_run_log4j_patcher.XXXXXX)
     log_info "Log file: $logfile"
     $HDP_SCRIPT | tee "$logfile" 2>&1
@@ -108,6 +109,9 @@ main() {
             subcommand_cdh "$@"
             ;;
         hdp)
+            subcommand_hdp "$@"
+            ;;
+        hdf)
             subcommand_hdp "$@"
             ;;
         *)
