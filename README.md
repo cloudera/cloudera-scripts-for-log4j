@@ -1,8 +1,6 @@
 # cloudera-scripts-for-log4j
 This repo contains Cloudera Scripts for log4j
 
-WARNING: This script should only be run under the guidance of Cloudera Support.
-
 run_log4j_patcher.sh scans a directory for jar files and removes
 JndiLookup.class from the ones it finds. Do not run any
 other scripts in this directory--they will be called by
