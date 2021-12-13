@@ -39,3 +39,5 @@ Usage: run_log4j_patcher.sh (subcommand) [options]
         RUN_SCAN          If non-empty, runs a final scan for missed vulnerable files. This can take several hours.
 
 HDP Notes : Currently the HDP removal scrips works on folder `/user/`  on HDFS. Please modify/extent in The `hdp_log4j_jndi_removal.sh` around `line 19`.  
+
+CDP Notes : By default, the script will scan all parcel directories. Therefore, it is advisable to deactivate and remove all obsolete/unused parcels.
