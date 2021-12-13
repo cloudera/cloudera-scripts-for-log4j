@@ -185,13 +185,8 @@ function delete_jndi_from_hdfs {
   hdfs dfs -test -e $hdfs_path
   ret_status=$?
   if [ $ret_status -eq 1 ]; then
-    if [ $file_type ==  "tez" ]; then
-      echo "Tar ball is not available in $hdfs_path. Tez is not installed."
-      return
-    else
-      echo "Tar ball is not available in $hdfs_path. Exiting gracefully"
-      exit 0
-    fi
+    echo "Tar ball is not available in $hdfs_path. $file_type is not installed."
+    return
   fi
 
   hdfs_file_path=$(hdfs dfs -ls $hdfs_path | tail -1  | awk '{print $8}')
