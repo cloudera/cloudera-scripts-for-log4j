@@ -20,8 +20,8 @@ run_log4j_patcher.sh automatically.
    command exits unsuccessfully.
 3. Restart Cloudera Manager Server or Ambari, all clusters, and all running
    jobs and queries.
-
-Usage: run_log4j_patcher.sh (subcommand) [options]
+```
+    Usage: run_log4j_patcher.sh (subcommand) [options]
     Subcommands:
         help              Prints this message
         cdh               Scan a CDH cluster node
