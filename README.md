@@ -1,2 +1,2 @@
-# log4j-scripts
-Scripts for addressing log4j zero day security issue
+# cloudera-scripts-for-log4j
+This repo contains Cloudera Scripts for log4j
