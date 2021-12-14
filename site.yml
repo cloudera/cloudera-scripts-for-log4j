@@ -5,6 +5,7 @@
 #
 # Notes:
 # - First please read Cloudera's README.md
+# - Requires packages/rpms installed on all nodes: zip,unzip
 # - Before running it, set the ansible vars below to match your Env, in particular the script's cmdline
 # - For simplicity, I decided to create a single self-contained playbook, instead of a cleaner ansible role (with the vars in the defaults etc)
 #   - On demand, I'm happy to refactor this into a role
@@ -37,15 +38,11 @@
         file: 
           state: directory
           path: "{{ log4j_patcher_install_dir }}"
-          #mode: "0755"
-          #owner:
-        
+
       - name: Deploying the script files
         copy:
           src: "{{ item }}"
-          dest: "{{ log4j_patcher_install_dir }}/"
-          # Workaround: Explicitly set execute permission, since Cloudera committed the scripts w/out the required permissions
-          mode: "u+x"   
+          dest: "{{ log4j_patcher_install_dir }}/" 
         with_fileglob: "*.sh"
 
       - name: Deploy any helper sub dirs (or other files)
