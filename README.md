@@ -49,4 +49,6 @@ run_log4j_patcher.sh automatically.
         SKIP_HDFS         If non-empty, skips scanning and patching .tar.gz files in HDFS
         RUN_SCAN          If non-empty, runs a final scan for missed vulnerable files. This can take several hours.
 ```
-HDP Notes : Currently the HDP removal scrips works on folder `/user/`  on HDFS. Please modify/extent in The `hdp_log4j_jndi_removal.sh` around `line 19`.  
+HDP Notes : Currently the HDP removal scrips works on folder `/user/`  on HDFS. Please modify/extent in The `hdp_log4j_jndi_removal.sh` around `line 19`.
+
+CFM Notes : Don't forget to restart Nifi and NifiRegisty service. In case the workdir also needs to be cleared of the Jndi classes use the script's distro-specific `-t` parameter with `/var/lib/nifi`.
