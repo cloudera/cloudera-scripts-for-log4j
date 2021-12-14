@@ -25,6 +25,9 @@ if [ ! -f "$tarfile" ]; then
 	exit 1
 fi
 
+user_id=$(stat --printf "%u")
+group_id$(stat --printf "%g")
+
 backupdir=${2:-/opt/cloudera/log4shell-backup}
 mkdir -p "$backupdir/$(dirname $tarfile)"
 targetbackup="$backupdir/$tarfile.backup"
@@ -42,7 +45,7 @@ tar xf "$tarfile" -C "$tempdir"
 $delete_jndi "$tempdir" "$tempbackupdir"
 
 echo "Recompressing"
-(cd "$tempdir" && tar czf "$tempfile" --owner=1000 --group=100 .)
+(cd "$tempdir" && tar czf "$tempfile" --owner="$user_id" --group="$group_id" .)
 
 # Restore old permissions before replacing original
 chown --reference="$tarfile" "$tempfile"
