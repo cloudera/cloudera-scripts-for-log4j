@@ -43,9 +43,9 @@ run_log4j_patcher.sh automatically.
         -t <targetdir>    Override target directory (default: distro-specific)
         -b <backupdir>    Override backup directory (default: /opt/cloudera/log4shell-backup)
 
-    Environment Variables (cdh and cdp subcommands only):
+    Environment Variables:
         SKIP_JAR          If non-empty, skips scanning and patching .jar files
-        SKIP_TGZ          If non-empty, skips scanning and patching .tar.gz files
+        SKIP_TGZ          If non-empty, skips scanning and patching .tar.gz files (cdh and cdp only)
         SKIP_HDFS         If non-empty, skips scanning and patching .tar.gz files in HDFS
         RUN_SCAN          If non-empty, runs a final scan for missed vulnerable files. This can take several hours.
 ```

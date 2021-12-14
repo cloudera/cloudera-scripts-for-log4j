@@ -183,11 +183,13 @@ function delete_jndi_from_hdfs {
     exit 1
   fi
 
+  user_option=""
   keytab_file="hdfs.keytab"
   keytab=$(find /var/run/cloudera-scm-agent/process/ -type f -iname $keytab_file | grep -e NAMENODE -e DATANODE | tail -1)
   if [[ -z "$keytab" || ! -s $keytab ]]; then
     echo "Keytab file is not found or is empty: $keytab_file. Considering this as a non-secure cluster deployment."
     issecure="false"
+    user_option="sudo -u hdfs"
   fi
 
   if [ $issecure == "true" ]; then
@@ -222,7 +224,7 @@ function delete_jndi_from_hdfs {
   hdfs dfs -test -e $hdfs_lock_path
   ret_status=$?
   if [ $ret_status -eq 1 ]; then
-    hdfs dfs -touch $hdfs_lock_path
+    $user_option hdfs dfs -touch $hdfs_lock_path
   else
     echo "Tar ball for $file_type in HDFS is already upgraded."
     return 0
@@ -242,8 +244,8 @@ function delete_jndi_from_hdfs {
   hdfs_bc_path="/tmp/backup.${current_time}"
 
   echo "Taking a backup of HDFS dir $hdfs_file_path to $hdfs_bc_path"
-  hdfs dfs -mkdir -p $hdfs_bc_path
-  hdfs dfs -cp -f  $hdfs_file_path $hdfs_bc_path
+  $user_option hdfs dfs -mkdir -p $hdfs_bc_path
+  $user_option hdfs dfs -cp -f  $hdfs_file_path $hdfs_bc_path
 
   out="$(basename $local_path/*)"
   local_full_path="${local_path}/${out}"
@@ -252,8 +254,8 @@ function delete_jndi_from_hdfs {
   delete_jndi_from_targz_file $local_full_path
 
   echo "Completed executing log4j removal script and uploading $out to $hdfs_file_path"
-  hdfs dfs -copyFromLocal -f $local_full_path $hdfs_file_path
-  hdfs dfs -chown $username $hdfs_file_path
+  $user_option hdfs dfs -copyFromLocal -f $local_full_path $hdfs_file_path
+  $user_option hdfs dfs -chown $username $hdfs_file_path
 
   echo "Printing updated HDFS file stats"
   hdfs dfs -ls $hdfs_file_path
