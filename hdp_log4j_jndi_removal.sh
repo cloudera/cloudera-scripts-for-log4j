@@ -12,6 +12,21 @@
 BASEDIR=$(dirname "$0")
 echo $BASEDIR
 
+if ! command -v zip &> /dev/null; then
+	echo "zip not found. zip is required to run this script."
+	exit 1
+fi
+
+if ! command -v unzip &> /dev/null; then
+	echo "unzip not found. unzip is required to run this script."
+	exit 1
+fi
+
+if ! command -v zgrep &> /dev/null; then
+	echo "zgrep not found. zgrep is required to run this script."
+	exit 1
+fi
+
 if [ -z "$SKIP_JAR" ]; then
   echo "Removing JNDI from jar files"
   $BASEDIR/hdp_support_scripts/delete_jndi.sh "$1" $2
