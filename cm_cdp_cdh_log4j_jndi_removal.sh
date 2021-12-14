@@ -185,7 +185,7 @@ function delete_jndi_from_hdfs {
 
   user_option=""
   keytab_file="hdfs.keytab"
-  keytab=$(find /var/run/cloudera-scm-agent/process/ -type f -iname $keytab_file | grep -e NAMENODE -e DATANODE | tail -1)
+  keytab=$(find /var/run/cloudera-scm-agent/process/ -type f -iname $keytab_file | grep -e NAMENODE -e DATANODE -e JOURNALNODE | tail -1)
   if [[ -z "$keytab" || ! -s $keytab ]]; then
     echo "Keytab file is not found or is empty: $keytab_file. Considering this as a non-secure cluster deployment."
     issecure="false"
