@@ -14,7 +14,7 @@ echo $BASEDIR
 
 if [ -z "$SKIP_JAR" ]; then
   echo "Removing JNDI from jar files"
-  $BASEDIR/hdp_support_scripts/delete_jndi.sh
+  $BASEDIR/hdp_support_scripts/delete_jndi.sh "$1" $2
 else
   echo "Skipped patching .jar"
 fi
@@ -31,6 +31,6 @@ fi
 
 if [ -n "$RUN_SCAN" ]; then
   echo "Running scan for missed JndiLookup classes. This may take a while."
-  $BASEDIR/hdp_support_scripts/scan_jndi.sh
+  $BASEDIR/hdp_support_scripts/scan_jndi.sh "$1" $2
 fi
 

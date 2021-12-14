@@ -84,10 +84,31 @@ subcommand_cdh() {
 }
 
 subcommand_hdp() {
-    log_info "Running HDP/HDF patcher script: $HDP_SCRIPT"
+    TARGETDIR="/usr/hdp/current /usr/hdf/current /usr/lib /var/lib"
+    BACKUPDIR=/opt/cloudera/log4shell-backup
+
+    unset OPTIND OPTARG options
+
+    while getopts "t:b:" options
+    do
+        case ${options} in
+            (t)
+                TARGETDIR=${OPTARG}
+                ;;
+            (b)
+                BACKUPDIR=${OPTARG}
+                ;;
+            (?)
+                log_error "Invalid option ${OPTARG} passed .. "
+                exit 1
+                ;;
+        esac
+    done
+
+    log_info "Running HDP/HDF patcher script: $HDP_SCRIPT '$TARGETDIR' $BACKUPDIR"
     logfile=$(mktemp output_run_log4j_patcher.XXXXXX)
     log_info "Log file: $logfile"
-    $HDP_SCRIPT | tee "$logfile" 2>&1
+    $HDP_SCRIPT "$TARGETDIR" $BACKUPDIR | tee "$logfile" 2>&1
 
     log_info "Finished"
 }
