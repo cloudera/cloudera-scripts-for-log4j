@@ -27,7 +27,7 @@ if ! command -v zgrep &> /dev/null; then
 	exit 1
 fi
 
-for targetdir in ${1:-/usr/hdp/current /usr/lib /var/lib}
+for targetdir in ${1:-/usr/hdp/current /usr/hdf/current /usr/lib /var/lib}
 do
   echo "Running on '$targetdir'"
 

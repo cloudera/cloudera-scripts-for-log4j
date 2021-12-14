@@ -14,6 +14,14 @@ set -eu -o pipefail
 shopt -s globstar
 shopt -s nullglob 
 
+BASEDIR=$(dirname "$0")
+
+patch_tgz=$BASEDIR/patch_tgz.sh
+if [ ! -f "$patch_tgz" ]; then
+        echo "Patch script is not found: $patch_tgz"
+        exit 1
+fi
+
 if ! command -v zip &> /dev/null; then
 	echo "zip not found. zip is required to run this script."
 	exit 1
@@ -76,6 +84,12 @@ do
 	fi
 	
     rm -r -f /tmp/unzip_target
+  done
+  
+  for tarfile in $targetdir/**/*.{tar.gz,tgz}; do
+	if zgrep -q JndiLookup.class $tarfile; then
+		$patch_tgz $tarfile
+	fi
   done
 done
 
