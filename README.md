@@ -51,4 +51,4 @@ run_log4j_patcher.sh automatically.
 ```
 HDP Notes : Currently the HDP removal scrips works on folder `/user/`  on HDFS. Please modify/extent in The `hdp_log4j_jndi_removal.sh` around `line 19`.
 
-CFM Notes : Don't forget to restart Nifi and NifiRegisty service. In case the workdir also needs to be cleared of the Jndi classes use the script's distro-specific `-t` parameter with `/var/lib/nifi`.
+CFM Parcel Notes : Don't forget to restart Nifi and NifiRegisty service. In case the workdir also needs to be cleared of the Jndi classes use the `run_log4j_patcher.sh` script's distro-specific `-t` parameter with `/var/lib/nifi`.
