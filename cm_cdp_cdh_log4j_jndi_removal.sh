@@ -10,16 +10,6 @@
 # --------------------------------------------------------------------------------------
 
 function scan_for_jndi {
-  if ! command -v unzip &> /dev/null; then
-    echo "unzip not found. unzip is required to run this script."
-    exit 1
-  fi
-
-  if ! command -v zgrep &> /dev/null; then
-    echo "zgrep not found. zgrep is required to run this script."
-    exit 1
-  fi
-
   targetdir=${1:-/opt/cloudera}
   echo "Running on '$targetdir'"
 
@@ -74,12 +64,6 @@ function scan_for_jndi {
 
 
 function delete_jndi_from_jar_files {
-
-  if ! command -v zip &> /dev/null; then
-    echo "zip not found. zip is required to run this script."
-    exit 1
-  fi
-
   targetdir=${1:-/opt/cloudera}
   echo "Running on '$targetdir'"
 
@@ -314,6 +298,21 @@ EOF
 
 targetdir=${1:-/opt/cloudera}
 backupdir=${2:-/opt/cloudera/log4shell-backup}
+
+if ! command -v unzip &> /dev/null; then
+  echo "unzip not found. unzip is required to run this script."
+  exit 1
+fi
+
+if ! command -v zgrep &> /dev/null; then
+  echo "zgrep not found. zgrep is required to run this script."
+  exit 1
+fi
+
+if ! command -v zip &> /dev/null; then
+  echo "zip not found. zip is required to run this script."
+  exit 1
+fi
 
 if [ -z "$SKIP_JAR" ]; then
   echo "Removing JNDI from jar files"
