@@ -274,6 +274,7 @@ function delete_jndi_from_hdfs {
   echo "Printing current HDFS file stats"
   hdfs dfs -ls $hdfs_file_path
   hdfs dfs -get -f $hdfs_file_path $local_path
+  permissions=$(hdfs dfs -stat "%a" $hdfs_file_path)
 
   hdfs_bc_path="/tmp/backup.${current_time}"
 
@@ -290,6 +291,7 @@ function delete_jndi_from_hdfs {
   echo "Completed executing log4j removal script and uploading $out to $hdfs_file_path"
   $user_option hdfs dfs -copyFromLocal -f $local_full_path $hdfs_file_path
   $user_option hdfs dfs -chown $username $hdfs_file_path
+  $user_option hdfs dfs -chmod $permissions $hdfs_file_path
 
   echo "Printing updated HDFS file stats"
   hdfs dfs -ls $hdfs_file_path
