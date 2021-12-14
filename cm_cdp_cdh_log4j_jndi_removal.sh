@@ -10,7 +10,7 @@
 # --------------------------------------------------------------------------------------
 
 function scan_for_jndi {
-  targetdir=${1:-/opt/cloudera}
+  local targetdir=${1:-/opt/cloudera}
   echo "Running on '$targetdir'"
 
   pattern=JndiLookup.class
@@ -64,10 +64,10 @@ function scan_for_jndi {
 
 
 function delete_jndi_from_jar_files {
-  targetdir=${1:-/opt/cloudera}
+  local targetdir=${1:-/opt/cloudera}
   echo "Running on '$targetdir'"
 
-  backupdir=${2:-/opt/cloudera/log4shell-backup}
+  local backupdir=${2:-/opt/cloudera/log4shell-backup}
   mkdir -p "$backupdir"
   echo "Backing up files to '$backupdir'"
 
@@ -136,7 +136,7 @@ function delete_jndi_from_targz_file {
     exit 1
   fi
 
-  backupdir=${2:-/opt/cloudera/log4shell-backup}
+  local backupdir=${2:-/opt/cloudera/log4shell-backup}
   mkdir -p "$backupdir/$(dirname $tarfile)"
   targetbackup="$backupdir/$tarfile.backup"
   if [ ! -f "$targetbackup" ]; then
