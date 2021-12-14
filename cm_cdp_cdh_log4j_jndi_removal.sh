@@ -38,7 +38,7 @@ function scan_for_jndi {
     fi
   done
 
-  for warfile in $targetdir/**/*.war; do
+  for warfile in $targetdir/**/*.{war,nar}; do
     rm -r -f /tmp/unzip_target
     mkdir /tmp/unzip_target
     set +e

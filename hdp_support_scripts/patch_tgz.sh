@@ -43,6 +43,11 @@ $delete_jndi "$tempdir" "$tempbackupdir"
 
 echo "Recompressing"
 (cd "$tempdir" && tar czf "$tempfile" --owner=1000 --group=100 .)
+
+# Restore old permissions before replacing original
+chown --reference="$tarfile" "$tempfile"
+chmod --reference="$tarfile" "$tempfile"
+
 mv "$tempfile" "$tarfile"
 
 rm -f $tempfile
