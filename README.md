@@ -49,4 +49,6 @@ run_log4j_patcher.sh automatically.
         SKIP_HDFS         If non-empty, skips scanning and patching .tar.gz files in HDFS
         RUN_SCAN          If non-empty, runs a final scan for missed vulnerable files. This can take several hours.
 ```
-HDP Notes : Currently the HDP removal scrips works on folder `/user/`  on HDFS. Please modify/extent in The `hdp_log4j_jndi_removal.sh` around `line 26`.  
+HDP Notes : Currently the HDP removal scrips works on folder `/user/`  on HDFS. Please modify/extent in The `hdp_log4j_jndi_removal.sh` around `line 26`.
+
+CDP Notes : By default, the script will scan all parcel directories. Therefore, it is advisable to deactivate and remove all obsolete/unused parcels.
