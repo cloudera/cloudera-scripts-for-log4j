@@ -173,7 +173,6 @@ function delete_jndi_from_hdfs {
 
   mr_hdfs_path="/user/yarn/mapreduce/mr-framework/"
   tez_hdfs_path="/user/tez/*"
-  username=""
   issecure="true"
 
   if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
@@ -189,13 +188,11 @@ function delete_jndi_from_hdfs {
       external_hdfs_path=$tez_hdfs_path
     fi
     hdfs_path=$external_hdfs_path
-    username="tez"
   elif [ $file_type == "mr" ]; then
     if [ -z "$external_hdfs_path" ]; then
       external_hdfs_path=$mr_hdfs_path
     fi
     hdfs_path=$external_hdfs_path
-    username="yarn"
   else
     echo "Invalid arguments. Please choose 'mr' or 'tez' along with optional tar ball path."
     exit 1
@@ -248,6 +245,18 @@ function delete_jndi_from_hdfs {
     return 0
   fi
 
+  permissions=$(hdfs dfs -stat "%a" $hdfs_file_path)
+  if [ -z $permissions ]; then
+    echo "Unable to fetch permissions for $hdfs_file_path . Exiting"
+    exit 1
+  fi
+
+  user_group=$(hdfs dfs -stat "%u:%g" $hdfs_file_path)
+  if [ -z $user_group ]; then
+    echo "Unable to fetch user and group for $hdfs_file_path . Exiting"
+    exit 1
+  fi
+
   current_time=$(date "+%Y.%m.%d-%H.%M.%S")
   echo "Current Time : $current_time"
 
@@ -273,7 +282,8 @@ function delete_jndi_from_hdfs {
 
   echo "Completed executing log4j removal script and uploading $out to $hdfs_file_path"
   $user_option hdfs dfs -copyFromLocal -f $local_full_path $hdfs_file_path
-  $user_option hdfs dfs -chown $username $hdfs_file_path
+  $user_option hdfs dfs -chown $user_group $hdfs_file_path
+  $user_option hdfs dfs -chmod $permissions $hdfs_file_path
 
   echo "Printing updated HDFS file stats"
   hdfs dfs -ls $hdfs_file_path
