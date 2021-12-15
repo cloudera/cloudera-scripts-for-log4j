@@ -32,23 +32,26 @@ if [ ! -f "$patch_tgz" ]; then
         exit 1
 fi
 
+user_option=""
+issecure="true"
 keytab="/etc/security/keytabs/hdfs.headless.keytab"
-if [ -z "$keytab" ]; then
-        echo "Keytab file not found: $keytab"
-        exit 0
+if [[ -z "$keytab" || ! -s $keytab ]]; then
+	echo "Keytab file is not found or is empty: $keytab. Considering this as a non-secure cluster deployment."
+	issecure="false"
+	user_option="sudo -u hdfs"
+else
+	echo "Using $keytab to access HDFS"
+
+	principal=$(klist -kt $keytab | grep -v HTTP | tail -1 | awk '{print $4}')
+	if [ -z "$principal" ]; then
+			echo "principal not found: $principal"
+			exit 0
+	fi
+
+	kinit -kt $keytab $principal
 fi
 
-echo "Using $keytab to access HDFS"
-
-principal=$(klist -kt $keytab | grep -v HTTP | tail -1 | awk '{print $4}')
-if [ -z "$principal" ]; then
-        echo "principal not found: $principal"
-        exit 0
-fi
-
-kinit -kt $keytab $principal
-
-for hdfs_file_path in $(hdfs dfs -ls -R $hdfs_path | awk 'BEGIN {LAST=""} {if (match($8,LAST"/")>0) { print LAST; } LAST=$8}')
+for hdfs_file_path in $($user_option hdfs dfs -ls -R $hdfs_path | awk 'BEGIN {LAST=""} {if (match($8,LAST"/")>0) { print LAST; } LAST=$8}')
 do
   echo $hdfs_file_path
 
@@ -59,9 +62,10 @@ do
   
   rm -r -f $local_path
   mkdir -p $local_path
+  chmod 777 $local_path
   
   set +e
-  hdfs dfs -get "${hdfs_file_path}/*.jar" $local_path
+  $user_option hdfs dfs -get "${hdfs_file_path}/*.jar" $local_path
   ec=$?
   set -e
   
@@ -80,12 +84,12 @@ do
 	  done
 	  
 	  for f in ${changed[*]}; do
-		output=$(hdfs dfs -ls $hdfs_file_path/$f)
+		output=$($user_option hdfs dfs -ls $hdfs_file_path/$f)
 		username=$(echo $output | awk '{print $3":"$4}')
 		permission=$(echo $output | awk '{print "u="gensub("-", "", "g", substr($1,2,3))",g="gensub("-", "", "g", substr($1,5,3))",o="gensub("-", "", "g", substr($1,8,3))}')
-	    hdfs dfs -copyFromLocal -f $local_path/$f $hdfs_file_path/$f
-		hdfs dfs -chown $username $hdfs_file_path/$f
-		hdfs dfs -chmod $permission $hdfs_file_path/$f
+	    $user_option hdfs dfs -copyFromLocal -f $local_path/$f $hdfs_file_path/$f
+		$user_option hdfs dfs -chown $username $hdfs_file_path/$f
+		$user_option hdfs dfs -chmod $permission $hdfs_file_path/$f
 	  done
   else
 	echo "No files found. Skipping directory"
@@ -95,9 +99,10 @@ do
   
   rm -r -f $local_path
   mkdir -p $local_path
+  chmod 777 $local_path
   
   set +e
-  hdfs dfs -get "${hdfs_file_path}/*.tar.gz" $local_path
+  $user_option hdfs dfs -get "${hdfs_file_path}/*.tar.gz" $local_path
   ec=$?
   set -e
   
@@ -105,12 +110,12 @@ do
 		hdfs_bc_path="/tmp/backup.${current_time}"
 
 		echo "Taking a backup of HDFS dir $hdfs_file_path to $hdfs_bc_path"
-		hdfs dfs -mkdir -p $hdfs_bc_path
-		hdfs dfs -cp -f  $hdfs_file_path/*.tar.gz $hdfs_bc_path
+		$user_option hdfs dfs -mkdir -p $hdfs_bc_path
+		$user_option hdfs dfs -cp -f  $hdfs_file_path/*.tar.gz $hdfs_bc_path
 	
 		for f in $(ls $local_path); do
 			echo "Printing current HDFS file stats"
-			output=$(hdfs dfs -ls $hdfs_file_path/$f)
+			output=$($user_option hdfs dfs -ls $hdfs_file_path/$f)
 			echo $output
 			username=$(echo $output | awk '{print $3":"$4}')
 			permission=$(echo $output | awk '{print "u="gensub("-", "", "g", substr($1,2,3))",g="gensub("-", "", "g", substr($1,5,3))",o="gensub("-", "", "g", substr($1,8,3))}')
@@ -121,16 +126,18 @@ do
 			$patch_tgz $local_full_path
 
 			echo "Completed executing log4j removal script and uploading $f to $hdfs_file_path"
-			hdfs dfs -copyFromLocal -f $local_full_path $hdfs_file_path/$f
-			hdfs dfs -chown $username $hdfs_file_path/$f
-			hdfs dfs -chmod $permission $hdfs_file_path/$f
+			$user_option hdfs dfs -copyFromLocal -f $local_full_path $hdfs_file_path/$f
+			$user_option hdfs dfs -chown $username $hdfs_file_path/$f
+			$user_option hdfs dfs -chmod $permission $hdfs_file_path/$f
 
 			echo "Printing updated HDFS file stats"
-			hdfs dfs -ls $hdfs_file_path/$f
+			$user_option hdfs dfs -ls $hdfs_file_path/$f
 		done
   else
 	echo "No files found. Skipping directory"
   fi
 done
 
-kdestroy
+if [ $issecure == "true" ]; then
+	which kdestroy && kdestroy
+fi
