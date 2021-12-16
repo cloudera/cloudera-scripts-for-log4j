@@ -45,7 +45,7 @@ do
         rm -r -f /tmp/unzip_target
 	mkdir /tmp/unzip_target
 	set +e
-	unzip -qq $warfile -d /tmp/unzip_target
+	unzip -o -qq $warfile -d /tmp/unzip_target
 	set -e
 	
     found=0  # not found

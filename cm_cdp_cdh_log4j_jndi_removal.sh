@@ -31,7 +31,7 @@ function scan_for_jndi {
   for warfile in $targetdir/**/*.{war,nar}; do
     rm -r -f /tmp/unzip_target
     mkdir /tmp/unzip_target
-    unzip -qq $warfile -d /tmp/unzip_target
+    unzip -o -qq $warfile -d /tmp/unzip_target
 
     found=0  # not found
     for f in $(grep -r -l $pattern /tmp/unzip_target); do
@@ -95,7 +95,7 @@ function delete_jndi_from_jar_files {
 
     rm -r -f /tmp/unzip_target
     mkdir /tmp/unzip_target
-    unzip -qq $narfile -d /tmp/unzip_target
+    unzip -o -qq $narfile -d /tmp/unzip_target
     for jarfile in /tmp/unzip_target/**/*.jar; do
       if grep -q JndiLookup.class $jarfile; then
         # Backup file only if backup doesn't already exist

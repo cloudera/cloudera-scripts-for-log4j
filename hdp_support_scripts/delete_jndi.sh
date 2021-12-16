@@ -57,7 +57,7 @@ do
     rm -r -f /tmp/unzip_target
 	mkdir /tmp/unzip_target
 	set +e
-	unzip -qq $warfile -d /tmp/unzip_target
+	unzip -o -qq $warfile -d /tmp/unzip_target
 	set -e
 	  for jarfile in /tmp/unzip_target/**/*.jar; do
 		if grep -q JndiLookup.class $jarfile; then
