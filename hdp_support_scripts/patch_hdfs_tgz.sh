@@ -51,6 +51,10 @@ else
 	kinit -kt $keytab $principal
 fi
 
+tmpdir=${TMPDIR:-/tmp}
+mkdir -p $tmpdir
+echo "Using tmp directory '$tmpdir'"
+
 for hdfs_file_path in $($user_option hdfs dfs -ls -R $hdfs_path | awk 'BEGIN {LAST=""} {if (match($8,LAST"/")>0) { print LAST; } LAST=$8}')
 do
   echo $hdfs_file_path
@@ -58,7 +62,7 @@ do
   current_time=$(date "+%Y.%m.%d-%H.%M.%S")
   echo "Current Time : $current_time"
 
-  local_path="/tmp/hdfs_tar_files.${current_time}"
+  local_path="$tmpdir/hdfs_tar_files.${current_time}"
   
   rm -r -f $local_path
   mkdir -p $local_path
@@ -95,7 +99,7 @@ do
 	echo "No files found. Skipping directory"
   fi
 
-  local_path="/tmp/hdfs_tar_files.${current_time}"
+  local_path="$tmpdir/hdfs_tar_files.${current_time}"
   
   rm -r -f $local_path
   mkdir -p $local_path
@@ -107,7 +111,7 @@ do
   set -e
   
   if [ $ec -eq 0 ]; then
-		hdfs_bc_path="/tmp/backup.${current_time}"
+		hdfs_bc_path="$tmpdir/backup.${current_time}"
 
 		echo "Taking a backup of HDFS dir $hdfs_file_path to $hdfs_bc_path"
 		$user_option hdfs dfs -mkdir -p $hdfs_bc_path

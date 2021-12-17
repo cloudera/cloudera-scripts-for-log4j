@@ -15,6 +15,9 @@ shopt -s globstar
 shopt -s nullglob 
 
 BASEDIR=$(dirname "$0")
+tmpdir=${TMPDIR:-/tmp}
+mkdir -p $tmpdir
+echo "Using tmp directory '$tmpdir'"
 
 patch_tgz=$BASEDIR/patch_tgz.sh
 if [ ! -f "$patch_tgz" ]; then
@@ -60,12 +63,12 @@ do
     fi
     doZip=0
   
-    rm -r -f /tmp/unzip_target
-	mkdir /tmp/unzip_target
+    rm -r -f $tmpdir/unzip_target
+	mkdir $tmpdir/unzip_target
 	set +e
-	unzip -qq $warfile -d /tmp/unzip_target
+	unzip -qq $warfile -d $tmpdir/unzip_target
 	set -e
-	  for jarfile in /tmp/unzip_target/**/*.jar; do
+	  for jarfile in $tmpdir/unzip_target/**/*.jar; do
 		if [ -L  "$jarfile" ]; then
 			continue
 		fi
@@ -87,12 +90,12 @@ do
 
 	if [ 1 -eq $doZip ]; then
 	  echo "Updating '$warfile'"
-	  pushd /tmp/unzip_target
+	  pushd $tmpdir/unzip_target
 	  zip -r -q $warfile .
 	  popd
 	fi
 	
-    rm -r -f /tmp/unzip_target
+    rm -r -f $tmpdir/unzip_target
   done
   
   for tarfile in $targetdir/**/*.{tar.gz,tgz}; do

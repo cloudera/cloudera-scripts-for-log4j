@@ -35,12 +35,12 @@ function scan_for_jndi {
     if [ -L  "$warfile" ]; then
       continue
     fi
-    rm -r -f /tmp/unzip_target
-    mkdir /tmp/unzip_target
-    unzip -qq $warfile -d /tmp/unzip_target
+    rm -r -f $tmpdir/unzip_target
+    mkdir $tmpdir/unzip_target
+    unzip -qq $warfile -d $tmpdir/unzip_target
 
     found=0  # not found
-    for f in $(grep -r -l $pattern /tmp/unzip_target); do
+    for f in $(grep -r -l $pattern $tmpdir/unzip_target); do
       found=1  # found vulnerable class
       if grep -q $good_pattern $f; then
         found=2  # found fixed class
@@ -51,7 +51,7 @@ function scan_for_jndi {
     elif [ $found -eq 1 ]; then
       echo "Vulnerable version of Log4j-core found in '$warfile'"
     fi
-    rm -r -f /tmp/unzip_target
+    rm -r -f $tmpdir/unzip_target
   done
 
   for tarfile in $targetdir/**/*.{tar.gz,tgz}; do
@@ -108,14 +108,13 @@ function delete_jndi_from_jar_files {
     fi
     doZip=0
 
-    rm -r -f /tmp/unzip_target
-    mkdir /tmp/unzip_target
-    unzip -qq $narfile -d /tmp/unzip_target
-    for jarfile in /tmp/unzip_target/**/*.jar; do
+    rm -r -f $tmpdir/unzip_target
+    mkdir $tmpdir/unzip_target
+    unzip -qq $narfile -d $tmpdir/unzip_target
+    for jarfile in $tmpdir/unzip_target/**/*.jar; do
       if [ -L  "$jarfile" ]; then
         continue
       fi
-
       if grep -q JndiLookup.class $jarfile; then
         # Backup file only if backup doesn't already exist
         mkdir -p "$backupdir/$(dirname $jarfile)"
@@ -134,12 +133,12 @@ function delete_jndi_from_jar_files {
 
     if [ 1 -eq $doZip ]; then
       echo "Updating '$narfile'"
-      pushd /tmp/unzip_target
+      pushd $tmpdir/unzip_target
       zip -r -q $narfile .
       popd
     fi
 
-    rm -r -f /tmp/unzip_target
+    rm -r -f $tmpdir/unzip_target
   done
 
   echo "Completed removing JNDI from nar files"
@@ -279,7 +278,7 @@ function delete_jndi_from_hdfs {
   current_time=$(date "+%Y.%m.%d-%H.%M.%S")
   echo "Current Time : $current_time"
 
-  local_path="/tmp/hdfs_tar_files.${current_time}"
+  local_path="$tmpdir/hdfs_tar_files.${current_time}"
   mkdir -p $local_path
 
   echo "Downloading tar ball from HDFS path $hdfs_file_path to $local_path"
@@ -287,7 +286,7 @@ function delete_jndi_from_hdfs {
   hdfs dfs -ls $hdfs_file_path
   hdfs dfs -get -f $hdfs_file_path $local_path
 
-  hdfs_bc_path="/tmp/backup.${current_time}"
+  hdfs_bc_path="$tmpdir/backup.${current_time}"
 
   echo "Taking a backup of HDFS dir $hdfs_file_path to $hdfs_bc_path"
   $user_option hdfs dfs -mkdir -p $hdfs_bc_path
@@ -327,6 +326,9 @@ EOF
 
 targetdir=${1:-/opt/cloudera}
 backupdir=${2:-/opt/cloudera/log4shell-backup}
+tmpdir=${TMPDIR:-/tmp} 
+mkdir -p $tmpdir
+echo "Using tmp directory '$tmpdir'"
 
 if ! command -v unzip &> /dev/null; then
   echo "unzip not found. unzip is required to run this script."

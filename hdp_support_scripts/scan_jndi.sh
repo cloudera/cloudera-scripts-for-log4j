@@ -17,6 +17,10 @@ shopt -s nullglob
 pattern=JndiLookup.class
 good_pattern=ClassArbiter.class
 
+tmpdir=${TMPDIR:-/tmp}
+mkdir -p $tmpdir
+echo "Using tmp directory '$tmpdir'"
+
 if ! command -v unzip &> /dev/null; then
 	echo "unzip not found. unzip is required to run this script."
 	exit 1
@@ -48,14 +52,14 @@ do
   if [ -L  "$warfile" ]; then
     continue
   fi
-  rm -r -f /tmp/unzip_target
-	mkdir /tmp/unzip_target
+  rm -r -f $tmpdir/unzip_target
+	mkdir $tmpdir/unzip_target
 	set +e
-	unzip -qq $warfile -d /tmp/unzip_target
+	unzip -qq $warfile -d $tmpdir/unzip_target
 	set -e
 	
     found=0  # not found
-    for f in $(grep -r -l $pattern /tmp/unzip_target); do
+    for f in $(grep -r -l $pattern $tmpdir/unzip_target); do
       found=1  # found vulnerable class
       if grep -q $good_pattern $f; then
         found=2  # found fixed class
@@ -66,7 +70,7 @@ do
     elif [ $found -eq 1 ]; then
       echo "Vulnerable version of Log4j-core found in '$warfile'"
     fi
-    rm -r -f /tmp/unzip_target
+    rm -r -f $tmpdir/unzip_target
   done
 
   for tarfile in $targetdir/**/*.{tar.gz,tgz}; do

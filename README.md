@@ -48,5 +48,6 @@ run_log4j_patcher.sh automatically.
         SKIP_TGZ          If non-empty, skips scanning and patching .tar.gz files (cdh and cdp only)
         SKIP_HDFS         If non-empty, skips scanning and patching .tar.gz files in HDFS
         RUN_SCAN          If non-empty, runs a final scan for missed vulnerable files. This can take several hours.
+        TMPDIR            If non-empty, uses /tmp as the temporary directory. Set a different temporary directory using this.
 ```
 HDP Notes : Currently the HDP removal scrips works on folder `/user/`  on HDFS. Please modify/extent in The `hdp_log4j_jndi_removal.sh` around `line 26`.  
