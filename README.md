@@ -39,7 +39,7 @@ run_log4j_patcher.sh automatically.
         hdp               Scan a HDP cluster node
         hdf               Scan a HDF cluster node
 
-    Options (cdh and cdp subcommands only):
+    Options
         -t <targetdir>    Override target directory (default: distro-specific)
         -b <backupdir>    Override backup directory (default: /opt/cloudera/log4shell-backup)
 
