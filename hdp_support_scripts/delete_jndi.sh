@@ -36,6 +36,9 @@ do
   echo "Backing up files to '$backupdir'"
 
   for jarfile in $targetdir/**/*.jar; do
+	if [ -L  "$jarfile" ]; then
+		continue
+	fi
 	if grep -q JndiLookup.class $jarfile; then
 		# Backup file only if backup doesn't already exist
 		mkdir -p "$backupdir/$(dirname $jarfile)"
@@ -52,6 +55,9 @@ do
   done
   
   for warfile in $targetdir/**/*.{war,nar}; do
+    if [ -L  "$warfile" ]; then
+      continue
+    fi
     doZip=0
   
     rm -r -f /tmp/unzip_target
@@ -60,6 +66,9 @@ do
 	unzip -qq $warfile -d /tmp/unzip_target
 	set -e
 	  for jarfile in /tmp/unzip_target/**/*.jar; do
+		if [ -L  "$jarfile" ]; then
+			continue
+		fi
 		if grep -q JndiLookup.class $jarfile; then
 			# Backup file only if backup doesn't already exist
 			mkdir -p "$backupdir/$(dirname $jarfile)"
@@ -87,6 +96,9 @@ do
   done
   
   for tarfile in $targetdir/**/*.{tar.gz,tgz}; do
+	if [ -L  "$tarfile" ]; then
+		continue
+	fi
 	if zgrep -q JndiLookup.class $tarfile; then
 		$patch_tgz $tarfile
 	fi

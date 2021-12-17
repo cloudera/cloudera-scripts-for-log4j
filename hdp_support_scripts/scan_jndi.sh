@@ -32,6 +32,9 @@ do
   echo "Running on '$targetdir'"
 
   for jarfile in $targetdir/**/*.{jar,tar}; do
+	if [ -L  "$jarfile" ]; then
+		continue
+	fi
 	if grep -q $pattern $jarfile; then
 		if grep -q $good_pattern $jarfile; then
 			echo "Fixed version of Log4j-core found in '$jarfile'"
@@ -42,7 +45,10 @@ do
   done
 
   for warfile in $targetdir/**/*.{war,nar}; do
-        rm -r -f /tmp/unzip_target
+  if [ -L  "$warfile" ]; then
+    continue
+  fi
+  rm -r -f /tmp/unzip_target
 	mkdir /tmp/unzip_target
 	set +e
 	unzip -qq $warfile -d /tmp/unzip_target
@@ -64,6 +70,10 @@ do
   done
 
   for tarfile in $targetdir/**/*.{tar.gz,tgz}; do
+	if [ -L  "$tarfile" ]; then
+		continue
+	fi
+
 	if zgrep -q $pattern $tarfile; then
 		if zgrep -q $good_pattern $tarfile; then
 			echo "Fixed version of Log4j-core found in '$tarfile'"

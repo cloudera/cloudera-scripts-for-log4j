@@ -19,6 +19,9 @@ function scan_for_jndi {
   shopt -s globstar
 
   for jarfile in $targetdir/**/*.{jar,tar}; do
+    if [ -L  "$jarfile" ]; then
+      continue
+    fi
     if grep -q $pattern $jarfile; then
       if grep -q $good_pattern $jarfile; then
         echo "Fixed version of Log4j-core found in '$jarfile'"
@@ -29,6 +32,9 @@ function scan_for_jndi {
   done
 
   for warfile in $targetdir/**/*.{war,nar}; do
+    if [ -L  "$warfile" ]; then
+      continue
+    fi
     rm -r -f /tmp/unzip_target
     mkdir /tmp/unzip_target
     unzip -qq $warfile -d /tmp/unzip_target
@@ -49,6 +55,9 @@ function scan_for_jndi {
   done
 
   for tarfile in $targetdir/**/*.{tar.gz,tgz}; do
+    if [ -L  "$tarfile" ]; then
+      continue
+    fi
     if zgrep -q $pattern $tarfile; then
       if zgrep -q $good_pattern $tarfile; then
         echo "Fixed version of Log4j-core found in '$tarfile'"
@@ -73,6 +82,9 @@ function delete_jndi_from_jar_files {
 
   shopt -s globstar
   for jarfile in $targetdir/**/*.jar; do
+    if [ -L  "$jarfile" ]; then
+      continue
+    fi
     if grep -q JndiLookup.class $jarfile; then
       # Backup file only if backup doesn't already exist
       mkdir -p "$backupdir/$(dirname $jarfile)"
@@ -91,12 +103,19 @@ function delete_jndi_from_jar_files {
   echo "Completed removing JNDI from jar files"
 
   for narfile in $targetdir/**/*.nar; do
+    if [ -L  "$narfile" ]; then
+      continue
+    fi
     doZip=0
 
     rm -r -f /tmp/unzip_target
     mkdir /tmp/unzip_target
     unzip -qq $narfile -d /tmp/unzip_target
     for jarfile in /tmp/unzip_target/**/*.jar; do
+      if [ -L  "$jarfile" ]; then
+        continue
+      fi
+
       if grep -q JndiLookup.class $jarfile; then
         # Backup file only if backup doesn't already exist
         mkdir -p "$backupdir/$(dirname $jarfile)"
