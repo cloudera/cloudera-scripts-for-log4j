@@ -19,8 +19,8 @@ other scripts in this directory--they will be called by
 run_log4j_patcher.sh automatically.
 
 1. Run the script as root on ALL nodes of your cluster.
-   * Script will take 1 mandatory argument (cdh|cdp|hdp)
-   * (For CDH and CDP only) The script takes 2 optional arguments: a base
+   * Script will take 1 mandatory argument (cdh|cdp|hdp|hdf)
+   * The script takes 2 optional arguments: a base
      directory to scan in, and a backup directory. The default for both are
      /opt/cloudera and /opt/cloudera/log4shell-backup, respectively. These
      defaults work for CM/CDH 6 and CDP 7. A different set of directories will
