@@ -73,6 +73,8 @@ function scan_for_jndi {
 
 
 function delete_jndi_from_jar_files {
+  local _sha256sum_org
+  local _sha256sum_backup
   local targetdir=${1:-/opt/cloudera}
   echo "Running on '$targetdir'"
 
@@ -92,11 +94,22 @@ function delete_jndi_from_jar_files {
       if [ ! -f "$targetbackup" ]; then
         echo "Backing up to '$targetbackup'"
         cp -f "$jarfile" "$targetbackup"
+      else
+        echo "Backup file exists: ${targetbackup} - skipping backup"
       fi
 
-      # Rip out class
-      echo "Deleting JndiLookup.class from '$jarfile'"
-      zip -q -d "$jarfile" \*/JndiLookup.class
+      # Check the backup matches the original before altering it
+      _sha256sum_org=$(sha256sum ${jarfile} | awk -F' '  '{print $1}')
+      _sha256sum_backup=$(sha256sum ${targetbackup} | awk -F' '  '{print $1}')
+      if [ "${_sha256sum_org}" = "${_sha256sum_backup}" ] ; then
+        # Rip out class
+        echo "Deleting JndiLookup.class from '$jarfile'"
+        zip -q -d "$jarfile" */JndiLookup.class
+      else
+        echo "Backup of file ${jarfile} doesn't match ${targetbackup}"
+        echo "NOT removing JndiLookup.class from ${jarfile}"
+        exit 1
+      fi
     fi
   done
 
@@ -116,6 +129,7 @@ function delete_jndi_from_jar_files {
         continue
       fi
       if grep -q JndiLookup.class $jarfile; then
+
         # Backup file only if backup doesn't already exist
         mkdir -p "$backupdir/$(dirname $jarfile)"
         targetbackup="$backupdir/$jarfile.backup"
@@ -160,6 +174,8 @@ function delete_jndi_from_targz_file {
   if [ ! -f "$targetbackup" ]; then
     echo "Backing up to '$targetbackup'"
     cp -f "$tarfile" "$targetbackup"
+  else
+     echo "Backup file exists: ${targetbackup} - skipping backup"
   fi
 
   echo "Patching '$tarfile'"
@@ -342,6 +358,11 @@ fi
 
 if ! command -v zip &> /dev/null; then
   echo "zip not found. zip is required to run this script."
+  exit 1
+fi
+
+if ! command -v sha256sum &> /dev/null; then
+  echo "sha256sum not found. sha256sum is required to run this script."
   exit 1
 fi
 
