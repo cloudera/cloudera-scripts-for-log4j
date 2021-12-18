@@ -29,6 +29,14 @@ function scan_for_jndi {
         echo "Vulnerable version of Log4j-core found in '$jarfile'"
       fi
     fi
+    # Is this jar in jar (uber-jars)?
+    if unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' >/dev/null; then
+      for inner in $(unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' | awk '{print $4}'); do
+        if unzip -p $jarfile $inner | grep -q JndiLookup.class; then
+          echo "Vulnerable version of Log4j-core found in inner '$inner' of '$jarfile'"
+        fi
+      done
+    fi
   done
 
   for warfile in $targetdir/**/*.{war,nar}; do
@@ -90,7 +98,7 @@ function delete_jndi_from_jar_files {
     if grep -q JndiLookup.class $jarfile; then
       # Backup file only if backup doesn't already exist
       mkdir -p "$backupdir/$(dirname $jarfile)"
-      targetbackup="$backupdir/$jarfile.backup"
+      local targetbackup="$backupdir/$jarfile.backup"
       if [ ! -f "$targetbackup" ]; then
         echo "Backing up to '$targetbackup'"
         cp -f "$jarfile" "$targetbackup"
@@ -110,6 +118,33 @@ function delete_jndi_from_jar_files {
         echo "NOT removing JndiLookup.class from ${jarfile}"
         exit 1
       fi
+    fi
+
+    # Is this jar in jar (uber-jars)?
+    if unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' >/dev/null; then
+      for inner in $(unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' | awk '{print $4}'); do
+        if unzip -p $jarfile $inner | grep -q JndiLookup.class; then
+
+          # Backup file only if backup doesn't already exist
+          mkdir -p "$backupdir/$(dirname $jarfile)"
+          local targetbackup="$backupdir/$jarfile.backup"
+          if [ ! -f "$targetbackup" ]; then
+            echo "Backing up to '$targetbackup'"
+            cp -f "$jarfile" "$targetbackup"
+          else
+            echo "Backup file exists: ${targetbackup} - skipping backup"
+          fi
+
+          TMP_DIR=$(mktemp -d)
+          pushd $TMP_DIR
+          unzip -q $jarfile $inner
+          echo "Deleting JndiLookup.class in nested jar $inner of $jarfile"
+          zip -q -d $inner \*/JndiLookup.class
+          zip -qur $jarfile .
+          popd
+          rm -rf $TMP_DIR
+        fi
+      done
     fi
   done
 
