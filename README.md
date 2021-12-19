@@ -50,4 +50,8 @@ run_log4j_patcher.sh automatically.
         RUN_SCAN          If non-empty, runs a final scan for missed vulnerable files. This can take several hours.
         TMPDIR            If non-empty, uses /tmp as the temporary directory. Set a different temporary directory using this.
 ```
-HDP Notes : Currently the HDP removal scrips works on folder `/user/`  on HDFS. Please modify/extent in The `hdp_log4j_jndi_removal.sh` around `line 26`.  
+Example : Run scan without patching jar, tar, and HDFS.
+```
+SKIP_JAR=1 SKIP_TGZ=1 SKIP_HDFS=1 RUN_SCAN=1 ./run_log4j_patcher.sh [cdp|cdh|hdp|hdf]
+```
+HDP Notes : Currently the HDP removal scrips works on folder `/user/`  on HDFS. Please modify/extent in The `hdp_log4j_jndi_removal.sh` around `line 41`.  
