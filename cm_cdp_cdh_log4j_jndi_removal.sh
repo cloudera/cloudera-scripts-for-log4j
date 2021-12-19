@@ -410,7 +410,7 @@ fi
 
 if [ -z "$SKIP_TGZ" ]; then
   echo "Removing JNDI from tar.gz files"
-  for targzfile in $(find $targetdir -name '*.tar.gz') ; do
+  for targzfile in $(find "${targetdir}/" -type f -name '*.tar.gz') ; do
     delete_jndi_from_targz_file $targzfile $backupdir
   done
 else
