@@ -11,11 +11,9 @@
 
 set -eu -o pipefail
 
-shopt -s globstar
-shopt -s nullglob 
-
 pattern=JndiLookup.class
-good_pattern=ClassArbiter.class
+pattern_15=ClassArbiter.class
+pattern_16="MessagePatternConverter\$LookupMessagePatternConverter.class"
 
 tmpdir=${TMPDIR:-/tmp}
 mkdir -p $tmpdir
@@ -35,52 +33,57 @@ for targetdir in ${1:-/usr/hdp/current /usr/hdf/current /usr/lib /var/lib}
 do
   echo "Running on '$targetdir'"
 
-  for jarfile in $targetdir/**/*.{jar,tar}; do
+  for jarfile in $(find -L $targetdir -name "*.jar" -o -name "*.tar" -o -name "*.war" -o -name "*.nar"); do
 	if [ -L  "$jarfile" ]; then
 		continue
 	fi
 	if grep -q $pattern $jarfile; then
-		if grep -q $good_pattern $jarfile; then
-			echo "Fixed version of Log4j-core found in '$jarfile'"
+		if grep -q $pattern_15 $jarfile; then
+			if grep -q $pattern_16 $jarfile; then
+				echo "Fixed **2.15** version of Log4j-core found in '$jarfile'"
+			else
+				echo "Fixed 2.16 version of Log4j-core found in '$jarfile'"
+			fi
 		else
 			echo "Vulnerable version of Log4j-core found in '$jarfile'"
 		fi
 	fi
-  done
-
-  for warfile in $targetdir/**/*.{war,nar}; do
-  if [ -L  "$warfile" ]; then
-    continue
-  fi
-  rm -r -f $tmpdir/unzip_target
-	mkdir $tmpdir/unzip_target
-	set +e
-	unzip -qq $warfile -d $tmpdir/unzip_target
-	set -e
 	
-    found=0  # not found
-    for f in $(grep -r -l $pattern $tmpdir/unzip_target); do
-      found=1  # found vulnerable class
-      if grep -q $good_pattern $f; then
-        found=2  # found fixed class
-      fi
-    done
-    if [ $found -eq 2 ]; then
-      echo "Fixed version of Log4j-core found in '$warfile'"
-    elif [ $found -eq 1 ]; then
-      echo "Vulnerable version of Log4j-core found in '$warfile'"
+    # Is this jar in jar (uber-jars)?
+    if unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' >/dev/null; then
+      rm -r -f $tmpdir/unzip_target
+      mkdir $tmpdir/unzip_target
+      set +e
+      unzip -qq $jarfile -d $tmpdir/unzip_target
+      set -e
+      
+      for f in $(grep -l $pattern $(find $tmpdir/unzip_target -name "*.jar")); do
+        if grep -q $pattern_15 $f; then
+          if grep -q $pattern_16 $f; then
+            echo "Fixed **2.15** version of Log4j-core found in '$f' within '$jarfile'"
+          else
+            echo "Fixed 2.16 version of Log4j-core found in '$f' within '$jarfile'"
+          fi
+        else
+          echo "Vulnerable version of Log4j-core found in '$f' within '$jarfile'"
+        fi
+      done
+      rm -r -f $tmpdir/unzip_target
     fi
-    rm -r -f $tmpdir/unzip_target
   done
 
-  for tarfile in $targetdir/**/*.{tar.gz,tgz}; do
+  for tarfile in $(find -L $targetdir -name "*.tar.gz" -o -name "*.tgz"); do
 	if [ -L  "$tarfile" ]; then
 		continue
 	fi
 
 	if zgrep -q $pattern $tarfile; then
-		if zgrep -q $good_pattern $tarfile; then
-			echo "Fixed version of Log4j-core found in '$tarfile'"
+		if zgrep -q $pattern_15 $tarfile; then
+			if zgrep -q $pattern_16 $jarfile; then
+				echo "Fixed **2.15** version of Log4j-core found in '$tarfile'"
+			else
+				echo "Fixed 2.16 version of Log4j-core found in '$tarfile'"
+			fi
 		else
 			echo "Vulnerable version of Log4j-core found in '$tarfile'"
 		fi

@@ -11,9 +11,6 @@
 
 set -eu -o pipefail
 
-shopt -s globstar
-shopt -s nullglob 
-
 BASEDIR=$(dirname "$0")
 tmpdir=${TMPDIR:-/tmp}
 mkdir -p $tmpdir
@@ -32,107 +29,111 @@ fi
 
 for targetdir in ${1:-/usr/hdp/current /usr/hdf/current /usr/lib /var/lib}
 do
-  echo "Running on '$targetdir'"
-
-  backupdir=${2:-/opt/cloudera/log4shell-backup}
-  mkdir -p "$backupdir"
-  echo "Backing up files to '$backupdir'"
-
-  for jarfile in $targetdir/**/*.jar; do
-	if [ -L  "$jarfile" ]; then
-		continue
-	fi
-	if grep -q JndiLookup.class $jarfile; then
-		# Backup file only if backup doesn't already exist
-		mkdir -p "$backupdir/$(dirname $jarfile)"
-		targetbackup="$backupdir/$jarfile.backup"
-		if [ ! -f "$targetbackup" ]; then
-			echo "Backing up to '$targetbackup'"
-			cp -f "$jarfile" "$targetbackup"
-		fi
-
-		# Rip out class
-		echo "Deleting JndiLookup.class from '$jarfile'"
-		zip -q -d "$jarfile" \*/JndiLookup.class
-	fi
-
-        # Is this jar in jar (uber-jars)?
-        if unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' >/dev/null; then
-          for inner in $(unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' | awk '{print $4}'); do
-            if unzip -p $jarfile $inner | grep -q JndiLookup.class; then
-
-              # Backup file only if backup doesn't already exist
-              mkdir -p "$backupdir/$(dirname $jarfile)"
-              local targetbackup="$backupdir/$jarfile.backup"
-              if [ ! -f "$targetbackup" ]; then
-                echo "Backing up to '$targetbackup'"
-                cp -f "$jarfile" "$targetbackup"
-              else
-                echo "Backup file exists: ${targetbackup} - skipping backup"
+  if [ -d $targetdir ]; then
+    echo "Running on '$targetdir'"
+    
+    backupdir=${2:-/opt/cloudera/log4shell-backup}
+    mkdir -p "$backupdir"
+    echo "Backing up files to '$backupdir'"
+    
+    for jarfile in $(find -L $targetdir -name "*.jar"); do
+	  if [ -L  "$jarfile" ]; then
+	  	continue
+	  fi
+	  if grep -q JndiLookup.class $jarfile; then
+	  	# Backup file only if backup doesn't already exist
+	  	mkdir -p "$backupdir/$(dirname $jarfile)"
+	  	targetbackup="$backupdir/$jarfile.backup"
+	  	if [ ! -f "$targetbackup" ]; then
+	  		echo "Backing up to '$targetbackup'"
+	  		cp -f "$jarfile" "$targetbackup"
+	  	fi
+    
+	  	# Rip out class
+	  	echo "Deleting JndiLookup.class from '$jarfile'"
+	  	zip -q -d "$jarfile" \*/JndiLookup.class
+	  fi
+    
+          # Is this jar in jar (uber-jars)?
+          if unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' >/dev/null; then
+            for inner in $(unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' | awk '{print $4}'); do
+              if unzip -p $jarfile $inner | grep -q JndiLookup.class; then
+    
+                # Backup file only if backup doesn't already exist
+                mkdir -p "$backupdir/$(dirname $jarfile)"
+                local targetbackup="$backupdir/$jarfile.backup"
+                if [ ! -f "$targetbackup" ]; then
+                  echo "Backing up to '$targetbackup'"
+                  cp -f "$jarfile" "$targetbackup"
+                else
+                  echo "Backup file exists: ${targetbackup} - skipping backup"
+                fi
+    
+                TMP_DIR=$(mktemp -d)
+                pushd $TMP_DIR
+                unzip -q $jarfile $inner
+                echo "Deleting JndiLookup.class in nested jar $inner of $jarfile"
+                zip -q -d $inner \*/JndiLookup.class
+                zip -qur $jarfile .
+                popd
+                rm -rf $TMP_DIR
               fi
-
-              TMP_DIR=$(mktemp -d)
-              pushd $TMP_DIR
-              unzip -q $jarfile $inner
-              echo "Deleting JndiLookup.class in nested jar $inner of $jarfile"
-              zip -q -d $inner \*/JndiLookup.class
-              zip -qur $jarfile .
-              popd
-              rm -rf $TMP_DIR
-            fi
-          done
-        fi
-  done
-  
-  for warfile in $targetdir/**/*.{war,nar}; do
-    if [ -L  "$warfile" ]; then
-      continue
-    fi
-    doZip=0
-  
-    rm -r -f $tmpdir/unzip_target
-	mkdir $tmpdir/unzip_target
-	set +e
-	unzip -qq $warfile -d $tmpdir/unzip_target
-	set -e
-	  for jarfile in $tmpdir/unzip_target/**/*.jar; do
-		if [ -L  "$jarfile" ]; then
-			continue
-		fi
-		if grep -q JndiLookup.class $jarfile; then
-			# Backup file only if backup doesn't already exist
-			mkdir -p "$backupdir/$(dirname $jarfile)"
-			targetbackup="$backupdir/$jarfile.backup"
-			if [ ! -f "$targetbackup" ]; then
-				echo "Backing up to '$targetbackup'"
-				cp -f "$jarfile" "$targetbackup"
-			fi
-
-			# Rip out class
-			echo "Deleting JndiLookup.class from '$jarfile'"
-			zip -q -d "$jarfile" \*/JndiLookup.class
-			doZip=1
-		fi
-	  done
-
-	if [ 1 -eq $doZip ]; then
-	  echo "Updating '$warfile'"
-	  pushd $tmpdir/unzip_target
-	  zip -r -q $warfile .
-	  popd
-	fi
-	
-    rm -r -f $tmpdir/unzip_target
-  done
-  
-  for tarfile in $targetdir/**/*.{tar.gz,tgz}; do
-	if [ -L  "$tarfile" ]; then
-		continue
-	fi
-	if zgrep -q JndiLookup.class $tarfile; then
-		$patch_tgz $tarfile
-	fi
-  done
+            done
+          fi
+    done
+    
+    for warfile in $(find -L $targetdir -name "*.war" -o -name "*.nar"); do
+      if [ -L  "$warfile" ]; then
+        continue
+      fi
+      doZip=0
+    
+      rm -r -f $tmpdir/unzip_target
+	  mkdir $tmpdir/unzip_target
+	  set +e
+	  unzip -qq $warfile -d $tmpdir/unzip_target
+	  set -e
+	    for jarfile in $(find -L $tmpdir/unzip_target/ -name "*.jar"); do
+	  	if [ -L  "$jarfile" ]; then
+	  		continue
+	  	fi
+	  	if grep -q JndiLookup.class $jarfile; then
+	  		# Backup file only if backup doesn't already exist
+	  		mkdir -p "$backupdir/$(dirname $jarfile)"
+	  		targetbackup="$backupdir/$jarfile.backup"
+	  		if [ ! -f "$targetbackup" ]; then
+	  			echo "Backing up to '$targetbackup'"
+	  			cp -f "$jarfile" "$targetbackup"
+	  		fi
+    
+	  		# Rip out class
+	  		echo "Deleting JndiLookup.class from '$jarfile'"
+	  		zip -q -d "$jarfile" \*/JndiLookup.class
+	  		doZip=1
+	  	fi
+	    done
+    
+	  if [ 1 -eq $doZip ]; then
+	    echo "Updating '$warfile'"
+	    pushd $tmpdir/unzip_target
+	    zip -r -q $warfile .
+	    popd
+	  fi
+	  
+      rm -r -f $tmpdir/unzip_target
+    done
+    
+    for tarfile in $(find -L $targetdir -name "*.tar.gz" -o -name "*.tgz"); do
+	  if [ -L  "$tarfile" ]; then
+	  	continue
+	  fi
+	  if zgrep -q JndiLookup.class $tarfile; then
+	  	$patch_tgz $tarfile
+	  fi
+    done
+  else
+    echo "Skipping $targetdir directory as it doesn't exist"
+  fi
 done
 
 echo "Run successful"

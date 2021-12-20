@@ -16,9 +16,7 @@ function scan_for_jndi {
   pattern=JndiLookup.class
   good_pattern=ClassArbiter.class
 
-  shopt -s globstar
-
-  for jarfile in $targetdir/**/*.{jar,tar}; do
+  for jarfile in $(find -L $targetdir -name "*.jar" -o -name "*.tar"); do
     if [ -L  "$jarfile" ]; then
       continue
     fi
@@ -39,7 +37,7 @@ function scan_for_jndi {
     fi
   done
 
-  for warfile in $targetdir/**/*.{war,nar}; do
+  for warfile in $(find -L $targetdir -name "*.war" -o -name "*.nar"); do
     if [ -L  "$warfile" ]; then
       continue
     fi
@@ -62,7 +60,7 @@ function scan_for_jndi {
     rm -r -f $tmpdir/unzip_target
   done
 
-  for tarfile in $targetdir/**/*.{tar.gz,tgz}; do
+  for tarfile in $(find -L $targetdir -name "*.tar.gz" -o "*.tgz"); do
     if [ -L  "$tarfile" ]; then
       continue
     fi
@@ -90,8 +88,7 @@ function delete_jndi_from_jar_files {
   mkdir -p "$backupdir"
   echo "Backing up files to '$backupdir'"
 
-  shopt -s globstar
-  for jarfile in $targetdir/**/*.jar; do
+  for jarfile in $(find -L $targetdir -name "*.jar"); do
     if [ -L  "$jarfile" ]; then
       continue
     fi
@@ -150,7 +147,7 @@ function delete_jndi_from_jar_files {
 
   echo "Completed removing JNDI from jar files"
 
-  for narfile in $targetdir/**/*.nar; do
+  for narfile in $(find -L $targetdir -name "*.nar"); do
     if [ -L  "$narfile" ]; then
       continue
     fi
@@ -159,7 +156,7 @@ function delete_jndi_from_jar_files {
     rm -r -f $tmpdir/unzip_target
     mkdir $tmpdir/unzip_target
     unzip -qq $narfile -d $tmpdir/unzip_target
-    for jarfile in $tmpdir/unzip_target/**/*.jar; do
+    for jarfile in $(find -L $tmpdir/unzip_target -name "*.jar"); do
       if [ -L  "$jarfile" ]; then
         continue
       fi
@@ -410,7 +407,7 @@ fi
 
 if [ -z "$SKIP_TGZ" ]; then
   echo "Removing JNDI from tar.gz files"
-  for targzfile in $(find $targetdir -name '*.tar.gz') ; do
+  for targzfile in $(find -L $targetdir -name '*.tar.gz') ; do
     delete_jndi_from_targz_file $targzfile $backupdir
   done
 else
