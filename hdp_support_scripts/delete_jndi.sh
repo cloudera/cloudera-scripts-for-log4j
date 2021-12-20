@@ -12,6 +12,7 @@
 set -eu -o pipefail
 
 shopt -s globstar
+shopt -s dotglob
 shopt -s nullglob 
 
 BASEDIR=$(dirname "$0")
