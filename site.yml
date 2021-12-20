@@ -15,6 +15,7 @@
 - hosts: all
   become: yes
   gather_facts: no
+  serial: "{{ serial | default(0) | int }}"
   vars:
     log4j_patcher_install_dir: /opt/cloudera_log4j_patcher
     log4j_patcher_log_dir: "{{ log4j_patcher_install_dir }}"
