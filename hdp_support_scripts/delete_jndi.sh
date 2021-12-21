@@ -80,6 +80,7 @@ do
                 popd
                 rm -rf $TMP_DIR
               fi
+	      rm -Rf $outfile
             done
           fi
     done
