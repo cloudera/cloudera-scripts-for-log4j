@@ -114,10 +114,17 @@ do
 	    done
     
 	  if [ 1 -eq $doZip ]; then
-	    echo "Updating '$warfile'"
-	    pushd $tmpdir/unzip_target
-	    zip -r -q $warfile .
-	    popd
+        tempfile=$(mktemp -u)
+        echo "Updating '$warfile'"
+        pushd $tmpdir/unzip_target
+        zip -r -q $tempfile .
+        popd
+  
+        chown --reference="$warfile" "$tempfile"
+        chmod --reference="$warfile" "$tempfile"
+        mv -f "$tempfile" "$warfile"
+  
+        rm -f $tempfile      
 	  fi
 	  
       rm -r -f $tmpdir/unzip_target

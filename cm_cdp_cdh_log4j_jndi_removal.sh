@@ -178,10 +178,17 @@ function delete_jndi_from_jar_files {
     done
 
     if [ 1 -eq $doZip ]; then
+      tempfile=$(mktemp -u)
       echo "Updating '$narfile'"
       pushd $tmpdir/unzip_target
-      zip -r -q $narfile .
+      zip -r -q $tempfile .
       popd
+      
+      chown --reference="$narfile" "$tempfile"
+      chmod --reference="$narfile" "$tempfile"
+      mv -f "$tempfile" "$narfile"
+
+      rm -f $tempfile
     fi
 
     rm -r -f $tmpdir/unzip_target
@@ -225,7 +232,7 @@ function delete_jndi_from_targz_file {
   chown --reference="$tarfile" "$tempfile"
   chmod --reference="$tarfile" "$tempfile"
 
-  mv "$tempfile" "$tarfile"
+  mv -f "$tempfile" "$tarfile"
 
   rm -f $tempfile
   rm -rf $tempdir
