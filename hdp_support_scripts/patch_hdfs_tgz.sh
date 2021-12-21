@@ -55,7 +55,7 @@ tmpdir=${TMPDIR:-/tmp}
 mkdir -p $tmpdir
 echo "Using tmp directory '$tmpdir'"
 
-for hdfs_file_path in $($user_option hdfs dfs -ls -R $hdfs_path | awk 'BEGIN {LAST=""} {if (match($8,LAST"/")>0) { print LAST; } LAST=$8}')
+for hdfs_file_path in $($user_option hdfs dfs -ls -R $hdfs_path | awk 'BEGIN {LAST=""} /^d/ {LAST=$8} /^-.*(jar|tar.gz)/ {if (LAST) { print LAST; } LAST=""}')
 do
   echo $hdfs_file_path
 
