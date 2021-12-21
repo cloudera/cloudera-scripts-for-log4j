@@ -408,7 +408,10 @@ fi
 if [ -z "$SKIP_TGZ" ]; then
   echo "Removing JNDI from tar.gz files"
   for targzfile in $(find -L $targetdir -name '*.tar.gz') ; do
-    delete_jndi_from_targz_file $targzfile $backupdir
+    if zgrep -q JndiLookup.class $targzfile; then
+      echo "JndiLookup.class found in $targzfile, repacking"
+      delete_jndi_from_targz_file $targzfile $backupdir
+    fi
   done
 else
   echo "Skipped patching .tar.gz"
