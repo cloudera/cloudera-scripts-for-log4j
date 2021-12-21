@@ -60,7 +60,7 @@ function scan_for_jndi {
     rm -r -f $tmpdir/unzip_target
   done
 
-  for tarfile in $(find -L $targetdir -name "*.tar.gz" -o "*.tgz"); do
+  for tarfile in $(find -L $targetdir -name "*.tar.gz" -o  -name "*.tgz"); do
     if [ -L  "$tarfile" ]; then
       continue
     fi
