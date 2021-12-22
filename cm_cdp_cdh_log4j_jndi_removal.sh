@@ -243,39 +243,20 @@ function delete_jndi_from_targz_file {
 }
 
 function delete_jndi_from_hdfs {
-
-  mr_hdfs_path="/user/yarn/mapreduce/mr-framework/"
-  tez_hdfs_path="/user/tez/*"
   issecure="true"
 
-  if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
-        echo "Invalid arguments. Please choose 'mr' or 'tez' along with optional tar ball path."
+if [ ! "$#" -eq 3 ]; then
+    echo "Invalid arguments. Please choose tar ball HDFS path, keytab file and filetype as 'mr' or 'tez'."
     exit 1
   fi
 
-  file_type=$1
-  external_hdfs_path=${2:-""}
-
-  if [ $file_type ==  "tez" ]; then
-    if [ -z "$external_hdfs_path" ]; then
-      external_hdfs_path=$tez_hdfs_path
-    fi
-    hdfs_path=$external_hdfs_path
-  elif [ $file_type == "mr" ]; then
-    if [ -z "$external_hdfs_path" ]; then
-      external_hdfs_path=$mr_hdfs_path
-    fi
-    hdfs_path=$external_hdfs_path
-  else
-    echo "Invalid arguments. Please choose 'mr' or 'tez' along with optional tar ball path."
-    exit 1
-  fi
+  hdfs_path=$1
+  local keytab=$2
+  local file_type=$3
 
   user_option=""
-  keytab_file="hdfs.keytab"
-  keytab=$(find /var/run/cloudera-scm-agent/process/ -type f -iname $keytab_file | grep -e NAMENODE -e DATANODE | tail -1)
   if [[ -z "$keytab" || ! -s $keytab ]]; then
-    echo "Keytab file is not found or is empty: $keytab_file. Considering this as a non-secure cluster deployment."
+    echo "Keytab file is not found or is empty: $keytab. Considering this as a non-secure cluster deployment."
     issecure="false"
     user_option="sudo -u hdfs"
   fi
@@ -381,6 +362,7 @@ EOF
 
 targetdir=${1:-/opt/cloudera}
 backupdir=${2:-/opt/cloudera/log4shell-backup}
+platform=${3:-common}
 tmpdir=${TMPDIR:-/tmp} 
 mkdir -p $tmpdir
 echo "Using tmp directory '$tmpdir'"
@@ -425,10 +407,34 @@ else
 fi
 
 if [ -z "$SKIP_HDFS" ]; then
-  if ps -efww | grep org.apache.hadoop.hdfs.server.namenode.NameNode | grep -v grep  1>/dev/null 2>&1; then
-    echo "Found an HDFS namenode on this host, removing JNDI from HDFS tar.gz files"
-    delete_jndi_from_hdfs tez
-    delete_jndi_from_hdfs mr
+  if [ $platform == "ibm" ]; then
+    if ps -efww | grep org.apache.hadoop.hdfs.server.namenode.NameNode | grep -v grep  1>/dev/null 2>&1; then
+      echo "Found an HDFS namenode on this host, removing JNDI from HDFS tar.gz files for platform='$platform'"
+      keytab_file="nn.service.keytab"
+      keytab=$(find /etc/security/keytabs/ -type f -iname $keytab_file |tail -1)
+      delete_jndi_from_hdfs "/user/tez/*" $keytab "tez"
+      delete_jndi_from_hdfs "/user/yarn/mapreduce/mr-framework/" $keytab "mr"
+    fi
+  elif [ $platform == "dell" ]; then
+    if ps -efww | grep org.apache.hadoop.yarn.server.resourcemanager.ResourceManager | grep -v grep  1>/dev/null 2>&1; then
+      echo "Found an Resourcemanager on this host, removing JNDI from HDFS tar.gz files for platform='$platform'"
+      keytab_file="hdfs.headless.keytab"
+      keytab=$(find /etc/security/keytabs/ -type f -iname $keytab_file |tail -1)
+      if [[ -z "$keytab" || ! -s $keytab ]]; then
+        echo "/etc/security/keytabs/hdfs.headless.keytab is mandatory for DELL."
+        exit 1
+      fi
+      delete_jndi_from_hdfs "/user/tez/*" $keytab "tez"
+      delete_jndi_from_hdfs "/user/yarn/mapreduce/mr-framework/" $keytab "mr"
+    fi
+  else
+    if ps -efww | grep org.apache.hadoop.hdfs.server.namenode.NameNode | grep -v grep  1>/dev/null 2>&1; then
+      echo "Found an HDFS namenode on this host, removing JNDI from HDFS tar.gz files for platform='$platform'"
+      keytab_file="hdfs.keytab"
+      keytab=$(find /var/run/cloudera-scm-agent/process/ -type f -iname $keytab_file | grep -e NAMENODE -e DATANODE | tail -1)
+      delete_jndi_from_hdfs "/user/tez/*" $keytab "tez"
+      delete_jndi_from_hdfs "/user/yarn/mapreduce/mr-framework/" $keytab "mr"
+    fi
   fi
 else
   echo "Skipped patching .tar.gz in HDFS"

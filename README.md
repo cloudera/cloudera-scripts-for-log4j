@@ -39,9 +39,10 @@ run_log4j_patcher.sh automatically.
         hdp               Scan a HDP cluster node
         hdf               Scan a HDF cluster node
 
-    Options (cdh and cdp subcommands only):
-        -t <targetdir>    Override target directory (default: distro-specific)
-        -b <backupdir>    Override backup directory (default: /opt/cloudera/log4shell-backup)
+    Options:
+        -t <targetdir>          Override target directory (default: distro-specific)
+        -b <backupdir>          Override backup directory (default: /opt/cloudera/log4shell-backup)
+        -p <dell|ibm|common>    Override platform type (default: common)
 
     Environment Variables:
         SKIP_JAR          If non-empty, skips scanning and patching .jar files
@@ -59,4 +60,14 @@ SKIP_JAR=1 SKIP_TGZ=1 SKIP_HDFS=1 RUN_SCAN=1 ./run_log4j_patcher.sh [cdp|cdh|hdp
 ```
 RUN_SCAN=1 ./run_log4j_patcher.sh [cdp|cdh|hdp|hdf]
 ```
-HDP Notes : Currently the HDP removal scrips works on folder `/user/`  on HDFS. Please modify/extent in The `hdp_log4j_jndi_removal.sh` around `line 41`.  
+3. Run script on an IBM SpectrumScale
+```
+./run_log4j_patcher.sh [cdp|cdh|hdp|hdf] -p ibm
+```
+4. Run script on an DELL PowerScale/ISILON
+```
+./run_log4j_patcher.sh [cdp|cdh|hdp|hdf] -p dell
+NOTE: HDFS keytab is mandatory to run the script for DELL. Script expects HDFS headless keytab in '/etc/security/keytabs/hdfs.headless.keytab' path.
+```
+
+HDP Notes : Currently the HDP removal scrips works on folder `/user/`  on HDFS. Please modify/extent in The `hdp_log4j_jndi_removal.sh` around `line 57`.

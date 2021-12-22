@@ -36,8 +36,9 @@ subcommand_usage() {
         hdf               Scan a HDF cluster node
 
     Options (cdh and cdp subcommands only):
-        -t <targetdir>    Override target directory (default: distro-specific)
-        -b <backupdir>    Override backup directory (default: /opt/cloudera/log4shell-backup)
+        -t <targetdir>          Override target directory (default: distro-specific)
+        -b <backupdir>          Override backup directory (default: /opt/cloudera/log4shell-backup)
+        -p <dell|ibm|common>    Override platform type (default: common)
 
     Environment Variables:
         SKIP_JAR          If non-empty, skips scanning and patching .jar files
@@ -51,10 +52,11 @@ subcommand_usage() {
 subcommand_cdh() {
     TARGETDIR=/opt/cloudera
     BACKUPDIR=/opt/cloudera/log4shell-backup
+    PLATFORM="common"
 
     unset OPTIND OPTARG options
 
-    while getopts "t:b:" options
+    while getopts "t:b:p:" options
     do
         case ${options} in
             (t)
@@ -62,6 +64,9 @@ subcommand_cdh() {
                 ;;
             (b)
                 BACKUPDIR=${OPTARG}
+                ;;
+            (p)
+                PLATFORM=${OPTARG}
                 ;;
             (?)
                 log_error "Invalid option ${OPTARG} passed .. "
@@ -75,10 +80,10 @@ subcommand_cdh() {
       exit 1
     fi
 
-    log_info "Running CDH/CDP patcher script: $CDH_CDP_SCRIPT $TARGETDIR $BACKUPDIR"
+    log_info "Running CDH/CDP patcher script: $CDH_CDP_SCRIPT $TARGETDIR $BACKUPDIR $PLATFORM"
     logfile=$(mktemp output_run_log4j_patcher.XXXXXX)
     log_info "Log file: $logfile"
-    $CDH_CDP_SCRIPT "$TARGETDIR" "$BACKUPDIR" | tee "$logfile" 2>&1
+    $CDH_CDP_SCRIPT "$TARGETDIR" "$BACKUPDIR" $PLATFORM | tee "$logfile" 2>&1
 
     log_info "Finished"
 }
@@ -89,7 +94,7 @@ subcommand_hdp() {
 
     unset OPTIND OPTARG options
 
-    while getopts "t:b:" options
+    while getopts "t:b:p:" options
     do
         case ${options} in
             (t)
@@ -98,6 +103,9 @@ subcommand_hdp() {
             (b)
                 BACKUPDIR=${OPTARG}
                 ;;
+            (p)
+                PLATFORM=${OPTARG}
+                ;;
             (?)
                 log_error "Invalid option ${OPTARG} passed .. "
                 exit 1
@@ -105,10 +113,10 @@ subcommand_hdp() {
         esac
     done
 
-    log_info "Running HDP/HDF patcher script: $HDP_SCRIPT '$TARGETDIR' $BACKUPDIR"
+    log_info "Running HDP/HDF patcher script: $HDP_SCRIPT '$TARGETDIR' $BACKUPDIR $PLATFORM"
     logfile=$(mktemp output_run_log4j_patcher.XXXXXX)
     log_info "Log file: $logfile"
-    $HDP_SCRIPT "$TARGETDIR" $BACKUPDIR | tee "$logfile" 2>&1
+    $HDP_SCRIPT "$TARGETDIR" $BACKUPDIR $PLATFORM | tee "$logfile" 2>&1
 
     log_info "Finished"
 }

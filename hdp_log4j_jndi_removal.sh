@@ -11,6 +11,7 @@
 
 BASEDIR=$(dirname "$0")
 echo $BASEDIR
+platform=${3:-common}
 
 if ! command -v zip &> /dev/null; then
 	echo "zip not found. zip is required to run this script."
@@ -35,10 +36,26 @@ else
 fi
 
 if [ -z "$SKIP_HDFS" ]; then
-  if ps -efww | grep org.apache.hadoop.hdfs.server.namenode.NameNode | grep -v grep  1>/dev/null 2>&1; then
-    echo "Found an HDFS namenode on this host, removing JNDI from HDFS tar.gz files"
-    $BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/hdp/apps/"
-    $BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/user/"
+  if [[ $platform == "common" ||  $platform == "ibm" ]]; then
+    if ps -efww | grep org.apache.hadoop.hdfs.server.namenode.NameNode | grep -v grep  1>/dev/null 2>&1; then
+      echo "Found an HDFS namenode on this host, removing JNDI from HDFS tar.gz files for platform='$platform'"
+      keytab_file="hdfs.headless.keytab"
+      keytab=$(find /etc/security/keytabs/ -type f -iname $keytab_file |tail -1)
+      $BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/hdp/apps/" $keytab
+      $BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/user/" $keytab
+    fi
+  elif [ $platform == "dell" ]; then
+    if ps -efww | grep org.apache.hadoop.yarn.server.resourcemanager.ResourceManager | grep -v grep  1>/dev/null 2>&1; then
+      echo "Found an Resourcemanager on this host, removing JNDI from HDFS tar.gz files for platform='$platform'"
+      keytab_file="hdfs.headless.keytab"
+      keytab=$(find /etc/security/keytabs/ -type f -iname $keytab_file |tail -1)
+      if [[ -z "$keytab" || ! -s $keytab ]]; then
+        echo "/etc/security/keytabs/hdfs.headless.keytab is mandatory for DELL."
+        exit 1
+      fi
+      $BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/hdp/apps/" $keytab
+      $BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/user/" $keytab
+    fi
   fi
 else
   echo "Skipped patching .tar.gz in HDFS"

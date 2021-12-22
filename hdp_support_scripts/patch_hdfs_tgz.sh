@@ -14,9 +14,10 @@ set -e -o pipefail
 BASEDIR=$(dirname "$0")
 
 hdfs_path=$1
+keytab=$2
 
-if [ ! "$#" -eq 1 ]; then
-   	echo "Invalid arguements. The argument must be a single HDFS directory."
+if [ ! "$#" -eq 2 ]; then
+	echo "Invalid arguements. The argument must be an HDFS directory and valid keytab file."
 	exit 1
 fi
 
@@ -34,7 +35,6 @@ fi
 
 user_option=""
 issecure="true"
-keytab="/etc/security/keytabs/hdfs.headless.keytab"
 if [[ -z "$keytab" || ! -s $keytab ]]; then
 	echo "Keytab file is not found or is empty: $keytab. Considering this as a non-secure cluster deployment."
 	issecure="false"
