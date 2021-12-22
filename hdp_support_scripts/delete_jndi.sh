@@ -36,63 +36,33 @@ do
     mkdir -p "$backupdir"
     echo "Backing up files to '$backupdir'"
     
-    for jarfile in $(find -L $targetdir -name "*.jar"); do
-	  if [ -L  "$jarfile" ]; then
-	  	continue
-	  fi
-	  if grep -q JndiLookup.class $jarfile; then
+    for archivefile in $(find -L $targetdir -name "*.[wnj]ar"); do
+      if [ -L  "$archivefile" ]; then
+        continue
+      fi
+	  if grep -q JndiLookup.class $archivefile; then
 	  	# Backup file only if backup doesn't already exist
-	  	mkdir -p "$backupdir/$(dirname $jarfile)"
-	  	targetbackup="$backupdir/$jarfile.backup"
+	  	mkdir -p "$backupdir/$(dirname $archivefile)"
+	  	targetbackup="$backupdir/$archivefile.backup"
 	  	if [ ! -f "$targetbackup" ]; then
 	  		echo "Backing up to '$targetbackup'"
-	  		cp -f "$jarfile" "$targetbackup"
+	  		cp -f "$archivefile" "$targetbackup"
 	  	fi
     
 	  	# Rip out class
-	  	echo "Deleting JndiLookup.class from '$jarfile'"
-	  	zip -q -d "$jarfile" \*/JndiLookup.class
+	  	echo "Deleting JndiLookup.class from '$archivefile'"
+	  	zip -q -d "$archivefile" \*/JndiLookup.class
 	  fi
-    
-          # Is this jar in jar (uber-jars)?
-          if unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' >/dev/null; then
-            for inner in $(unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' | awk '{print $4}'); do
-              if unzip -p $jarfile $inner | grep -q JndiLookup.class; then
-    
-                # Backup file only if backup doesn't already exist
-                mkdir -p "$backupdir/$(dirname $jarfile)"
-                local targetbackup="$backupdir/$jarfile.backup"
-                if [ ! -f "$targetbackup" ]; then
-                  echo "Backing up to '$targetbackup'"
-                  cp -f "$jarfile" "$targetbackup"
-                else
-                  echo "Backup file exists: ${targetbackup} - skipping backup"
-                fi
-    
-                TMP_DIR=$(mktemp -d)
-                pushd $TMP_DIR
-                unzip -q $jarfile $inner
-                echo "Deleting JndiLookup.class in nested jar $inner of $jarfile"
-                zip -q -d $inner \*/JndiLookup.class
-                zip -qur $jarfile .
-                popd
-                rm -rf $TMP_DIR
-              fi
-            done
-          fi
-    done
-    
-    for warfile in $(find -L $targetdir -name "*.war" -o -name "*.nar"); do
-      if [ -L  "$warfile" ]; then
-        continue
-      fi
-      doZip=0
-    
-      rm -r -f $tmpdir/unzip_target
-	  mkdir $tmpdir/unzip_target
-	  set +e
-	  unzip -qq $warfile -d $tmpdir/unzip_target
-	  set -e
+      
+      if unzip -l $archivefile | grep -v 'Archive:' | grep '\.jar$' >/dev/null; then
+        doZip=0
+      
+        rm -r -f $tmpdir/unzip_target
+        mkdir $tmpdir/unzip_target
+        set +e
+        unzip -qq $archivefile -d $tmpdir/unzip_target
+        set -e
+      
 	    for jarfile in $(find -L $tmpdir/unzip_target/ -name "*.jar"); do
 	  	if [ -L  "$jarfile" ]; then
 	  		continue
@@ -107,27 +77,28 @@ do
 	  		fi
     
 	  		# Rip out class
-	  		echo "Deleting JndiLookup.class from '$jarfile'"
+	  		echo "Deleting JndiLookup.class from '$jarfile' within $archivefile"
 	  		zip -q -d "$jarfile" \*/JndiLookup.class
 	  		doZip=1
 	  	fi
 	    done
     
-	  if [ 1 -eq $doZip ]; then
-        tempfile=$(mktemp -u)
-        echo "Updating '$warfile'"
-        pushd $tmpdir/unzip_target
-        zip -r -q $tempfile .
-        popd
-  
-        chown --reference="$warfile" "$tempfile"
-        chmod --reference="$warfile" "$tempfile"
-        mv -f "$tempfile" "$warfile"
-  
-        rm -f $tempfile      
-	  fi
+        if [ 1 -eq $doZip ]; then
+          tempfile=$(mktemp -u)
+          echo "Updating '$archivefile'"
+          pushd $tmpdir/unzip_target >/dev/null
+          zip -r -q $tempfile .
+          popd >/dev/null
+    
+          chown --reference="$archivefile" "$tempfile"
+          chmod --reference="$archivefile" "$tempfile"
+          mv -f "$tempfile" "$archivefile"
+    
+          rm -f $tempfile      
+        fi
 	  
-      rm -r -f $tmpdir/unzip_target
+        rm -r -f $tmpdir/unzip_target
+      fi
     done
     
     for tarfile in $(find -L $targetdir -name "*.tar.gz" -o -name "*.tgz"); do
