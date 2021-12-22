@@ -57,11 +57,13 @@ do
           # Is this jar in jar (uber-jars)?
           if unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' >/dev/null; then
             for inner in $(unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' | awk '{print $4}'); do
-              if unzip -p $jarfile $inner | grep -q JndiLookup.class; then
+              outfile="$(mktemp)"
+              unzip -p $jarfile $inner 2> /dev/null > $outfile
+              if unzip -l $outfile | grep JndiLookup.class >/dev/null; then
     
                 # Backup file only if backup doesn't already exist
                 mkdir -p "$backupdir/$(dirname $jarfile)"
-                local targetbackup="$backupdir/$jarfile.backup"
+                targetbackup="$backupdir/$jarfile.backup"
                 if [ ! -f "$targetbackup" ]; then
                   echo "Backing up to '$targetbackup'"
                   cp -f "$jarfile" "$targetbackup"
@@ -78,6 +80,7 @@ do
                 popd
                 rm -rf $TMP_DIR
               fi
+	      rm -Rf $outfile
             done
           fi
     done
