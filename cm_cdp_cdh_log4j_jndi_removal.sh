@@ -421,8 +421,7 @@ if [ -z "$SKIP_HDFS" ]; then
       keytab_file="hdfs.headless.keytab"
       keytab=$(find /etc/security/keytabs/ -type f -iname $keytab_file |tail -1)
       if [[ -z "$keytab" || ! -s $keytab ]]; then
-        echo "/etc/security/keytabs/hdfs.headless.keytab is mandatory for DELL."
-        exit 1
+        echo "If this is a secure cluster, please ensure that /etc/security/keytabs/hdfs.headless.keytab is present for DELL."
       fi
       delete_jndi_from_hdfs "/user/tez/*" $keytab "tez"
       delete_jndi_from_hdfs "/user/yarn/mapreduce/mr-framework/" $keytab "mr"

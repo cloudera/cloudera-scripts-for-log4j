@@ -63,11 +63,12 @@ RUN_SCAN=1 ./run_log4j_patcher.sh [cdp|cdh|hdp|hdf]
 3. Run script on an IBM SpectrumScale
 ```
 ./run_log4j_patcher.sh [cdp|cdh|hdp|hdf] -p ibm
+NOTE: For IBM Power PC with HDFS clusters, '-p ibm' option is NOT required. Default platform will be picked for such deployments.
 ```
 4. Run script on an DELL PowerScale/ISILON
 ```
 ./run_log4j_patcher.sh [cdp|cdh|hdp|hdf] -p dell
-NOTE: HDFS keytab is mandatory to run the script for DELL. Script expects HDFS headless keytab in '/etc/security/keytabs/hdfs.headless.keytab' path.
+NOTE: HDFS keytab is mandatory to run the script for DELL Secure clusters. Script expects HDFS headless keytab in '/etc/security/keytabs/hdfs.headless.keytab' path.
 ```
 
 HDP Notes : Currently the HDP removal scrips works on folder `/user/`  on HDFS. Please modify/extent in The `hdp_log4j_jndi_removal.sh` around `line 57`.

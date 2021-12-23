@@ -50,8 +50,7 @@ if [ -z "$SKIP_HDFS" ]; then
       keytab_file="hdfs.headless.keytab"
       keytab=$(find /etc/security/keytabs/ -type f -iname $keytab_file |tail -1)
       if [[ -z "$keytab" || ! -s $keytab ]]; then
-        echo "/etc/security/keytabs/hdfs.headless.keytab is mandatory for DELL."
-        exit 1
+        echo "If this is a secure cluster, please ensure that /etc/security/keytabs/hdfs.headless.keytab is present for DELL."
       fi
       $BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/hdp/apps/" $keytab
       $BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/user/" $keytab
