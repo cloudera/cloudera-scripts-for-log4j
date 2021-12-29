@@ -15,8 +15,9 @@ BASEDIR=$(dirname "$0")
 
 hdfs_path=$1
 keytab=$2
+backup_dir=$3
 
-if [ ! "$#" -eq 2 ]; then
+if [ ! "$#" -eq 3 ]; then
 	echo "Invalid arguements. The argument must be an HDFS directory and valid keytab file."
 	exit 1
 fi
@@ -51,9 +52,9 @@ else
 	kinit -kt $keytab $principal
 fi
 
-tmpdir=${TMPDIR:-/tmp}
-mkdir -p $tmpdir
-echo "Using tmp directory '$tmpdir'"
+#tmpdir=${TMPDIR:-/tmp}
+mkdir -p $backup_dir
+echo "Using tmp directory '$backup_dir'"
 
 for hdfs_file_path in $($user_option hdfs dfs -ls -R $hdfs_path | awk 'BEGIN {LAST=""} /^d/ {LAST=$8} /^-.*(jar|tar.gz)/ {if (LAST) { print LAST; } LAST=""}')
 do
@@ -62,7 +63,7 @@ do
   current_time=$(date "+%Y.%m.%d-%H.%M.%S")
   echo "Current Time : $current_time"
 
-  local_path="$tmpdir/hdfs_tar_files.${current_time}"
+  local_path="$backup_dir/hdfs_tar_files.${current_time}"
   
   rm -r -f $local_path
   mkdir -p $local_path
@@ -78,7 +79,7 @@ do
 	  touch -d "$d" $local_path/mark
 	  touch -d "$d" $local_path/*
 	  
-	  $delete_jndi $local_path
+	  $delete_jndi $local_path $backup_dir
 	  
 	  changed=()
 	  for f in $(ls $local_path); do
@@ -99,7 +100,7 @@ do
 	echo "No files found. Skipping directory"
   fi
 
-  local_path="$tmpdir/hdfs_tar_files.${current_time}"
+  local_path="$backup_dir/hdfs_tar_files.${current_time}"
   
   rm -r -f $local_path
   mkdir -p $local_path
@@ -111,7 +112,7 @@ do
   set -e
   
   if [ $ec -eq 0 ]; then
-		hdfs_bc_path="$tmpdir/backup.${current_time}"
+		hdfs_bc_path="$backup_dir/backup.${current_time}"
 
 		echo "Taking a backup of HDFS dir $hdfs_file_path to $hdfs_bc_path"
 		$user_option hdfs dfs -mkdir -p $hdfs_bc_path
@@ -127,7 +128,7 @@ do
 			local_full_path="${local_path}/${f}"
 
 			echo "Executing the log4j removal script"
-			$patch_tgz $local_full_path
+			$patch_tgz $local_full_path $backup_dir
 
 			echo "Completed executing log4j removal script and uploading $f to $hdfs_file_path"
 			$user_option hdfs dfs -copyFromLocal -f $local_full_path $hdfs_file_path/$f

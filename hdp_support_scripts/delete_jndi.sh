@@ -12,9 +12,11 @@
 set -eu -o pipefail
 
 BASEDIR=$(dirname "$0")
-tmpdir=${TMPDIR:-/tmp}
-mkdir -p $tmpdir
-echo "Using tmp directory '$tmpdir'"
+backup_dir=$2
+
+#tmpdir=${TMPDIR:-/tmp}
+mkdir -p $backup_dir
+echo "Using tmp directory '$backup_dir'"
 
 patch_tgz=$BASEDIR/patch_tgz.sh
 if [ ! -f "$patch_tgz" ]; then
@@ -32,9 +34,9 @@ do
   if [ -d $targetdir ]; then
     echo "Running on '$targetdir'"
     
-    backupdir=${2:-/opt/cloudera/log4shell-backup}
-    mkdir -p "$backupdir"
-    echo "Backing up files to '$backupdir'"
+    #backupdir=${2:-/opt/cloudera/log4shell-backup}
+    #mkdir -p "$backupdir"
+    echo "Backing up files to '$backup_dir'"
     
     for archivefile in $(find -L $targetdir -name "*.[wnj]ar"); do
       if [ -L  "$archivefile" ]; then
@@ -42,8 +44,8 @@ do
       fi
 	  if grep -q JndiLookup.class $archivefile; then
 	  	# Backup file only if backup doesn't already exist
-	  	mkdir -p "$backupdir/$(dirname $archivefile)"
-	  	targetbackup="$backupdir/$archivefile.backup"
+	  	mkdir -p "$backup_dir/$(dirname $archivefile)"
+	  	targetbackup="$backup_dir/$archivefile.backup"
 	  	if [ ! -f "$targetbackup" ]; then
 	  		echo "Backing up to '$targetbackup'"
 	  		cp -f "$archivefile" "$targetbackup"
@@ -57,20 +59,20 @@ do
       if unzip -l $archivefile | grep -v 'Archive:' | grep '\.jar$' >/dev/null; then
         doZip=0
       
-        rm -r -f $tmpdir/unzip_target
-        mkdir $tmpdir/unzip_target
+        rm -r -f $backup_dir/unzip_target
+        mkdir $backup_dir/unzip_target
         set +e
-        unzip -qq $archivefile -d $tmpdir/unzip_target
+        unzip -qq $archivefile -d $backup_dir/unzip_target
         set -e
       
-	    for jarfile in $(find -L $tmpdir/unzip_target/ -name "*.jar"); do
+	    for jarfile in $(find -L $backup_dir/unzip_target/ -name "*.jar"); do
 	  	if [ -L  "$jarfile" ]; then
 	  		continue
 	  	fi
 	  	if grep -q JndiLookup.class $jarfile; then
 	  		# Backup file only if backup doesn't already exist
-	  		mkdir -p "$backupdir/$(dirname $jarfile)"
-	  		targetbackup="$backupdir/$jarfile.backup"
+	  		mkdir -p "$backup_dir/$(dirname $jarfile)"
+	  		targetbackup="$backup_dir/$jarfile.backup"
 	  		if [ ! -f "$targetbackup" ]; then
 	  			echo "Backing up to '$targetbackup'"
 	  			cp -f "$jarfile" "$targetbackup"
@@ -86,7 +88,7 @@ do
         if [ 1 -eq $doZip ]; then
           tempfile=$(mktemp -u)
           echo "Updating '$archivefile'"
-          pushd $tmpdir/unzip_target >/dev/null
+          pushd $backup_dir/unzip_target >/dev/null
           zip -r -q $tempfile .
           popd >/dev/null
     
@@ -97,7 +99,7 @@ do
           rm -f $tempfile      
         fi
 	  
-        rm -r -f $tmpdir/unzip_target
+        rm -r -f $backup_dir/unzip_target
       fi
     done
     
@@ -106,7 +108,7 @@ do
 	  	continue
 	  fi
 	  if zgrep -q JndiLookup.class $tarfile; then
-	  	$patch_tgz $tarfile
+	  	$patch_tgz $tarfile $backup_dir
 	  fi
     done
   else

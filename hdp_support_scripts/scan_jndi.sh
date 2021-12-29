@@ -15,9 +15,11 @@ pattern=JndiLookup.class
 pattern_15=ClassArbiter.class
 pattern_16="MessagePatternConverter\$LookupMessagePatternConverter.class"
 
-tmpdir=${TMPDIR:-/tmp}
-mkdir -p $tmpdir
-echo "Using tmp directory '$tmpdir'"
+backup_dir=$2
+
+#tmpdir=${TMPDIR:-/tmp}
+mkdir -p $backup_dir
+echo "Using tmp directory '$backup_dir'"
 
 if ! command -v unzip &> /dev/null; then
 	echo "unzip not found. unzip is required to run this script."
@@ -51,13 +53,13 @@ do
 	
     # Is this jar in jar (uber-jars)?
     if unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' >/dev/null; then
-      rm -r -f $tmpdir/unzip_target
-      mkdir $tmpdir/unzip_target
+      rm -r -f $backup_dir/unzip_target
+      mkdir $backup_dir/unzip_target
       set +e
-      unzip -qq $jarfile -d $tmpdir/unzip_target
+      unzip -qq $jarfile -d $backup_dir/unzip_target
       set -e
       
-      for f in $(grep -l $pattern $(find $tmpdir/unzip_target -name "*.jar")); do
+      for f in $(grep -l $pattern $(find $backup_dir/unzip_target -name "*.jar")); do
         if grep -q $pattern_15 $f; then
           if grep -q $pattern_16 $f; then
             echo "Fixed **2.15** version of Log4j-core found in '$f' within '$jarfile'"
@@ -68,7 +70,7 @@ do
           echo "Vulnerable version of Log4j-core found in '$f' within '$jarfile'"
         fi
       done
-      rm -r -f $tmpdir/unzip_target
+      rm -r -f $backup_dir/unzip_target
     fi
   done
 

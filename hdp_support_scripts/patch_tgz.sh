@@ -12,6 +12,7 @@
 set -eu -o pipefail
 
 BASEDIR=$(dirname "$0")
+backup_dir=$2
 
 delete_jndi=$BASEDIR/delete_jndi.sh
 if [ ! -f "$delete_jndi" ]; then
@@ -25,9 +26,9 @@ if [ ! -f "$tarfile" ]; then
 	exit 1
 fi
 
-backupdir=${2:-/opt/cloudera/log4shell-backup}
-mkdir -p "$backupdir/$(dirname $tarfile)"
-targetbackup="$backupdir/$tarfile.backup"
+#backupdir=${2:-/opt/cloudera/log4shell-backup}
+mkdir -p "$backup_dir/$(dirname $tarfile)"
+targetbackup="$backup_dir/$tarfile.backup"
 if [ ! -f "$targetbackup" ]; then
 	echo "Backing up to '$targetbackup'"
 	cp -f "$tarfile" "$targetbackup"
