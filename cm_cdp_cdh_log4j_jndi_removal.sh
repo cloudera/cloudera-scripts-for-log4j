@@ -264,7 +264,7 @@ if [ ! "$#" -eq 3 ]; then
   if [ $issecure == "true" ]; then
     echo "Using $keytab to access HDFS"
 
-    principal=$(klist -kt $keytab | grep -v HTTP | tail -1 | awk '{print $4}')
+    principal=$(klist -kt $keytab | egrep -v 'HTTP|host/' | tail -1 | awk '{print $4}')
     if [ -z "$principal" ]; then
       echo "principal not found: $principal"
       exit 0
