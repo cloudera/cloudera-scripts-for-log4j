@@ -88,10 +88,9 @@ do
 	  done
 	  
 	  for f in ${changed[*]}; do
-		output=$($user_option hdfs dfs -ls $hdfs_file_path/$f)
-		username=$(echo $output | awk '{print $3":"$4}')
-		permission=$(echo $output | awk '{print "u="gensub("-", "", "g", substr($1,2,3))",g="gensub("-", "", "g", substr($1,5,3))",o="gensub("-", "", "g", substr($1,8,3))}')
-	    $user_option hdfs dfs -copyFromLocal -f $local_path/$f $hdfs_file_path/$f
+		username=$(hdfs dfs -stat "%u:%g" $hdfs_file_path/$f)
+		permission=$(hdfs dfs -stat "%a" $hdfs_file_path/$f)
+		$user_option hdfs dfs -copyFromLocal -f $local_path/$f $hdfs_file_path/$f
 		$user_option hdfs dfs -chown $username $hdfs_file_path/$f
 		$user_option hdfs dfs -chmod $permission $hdfs_file_path/$f
 	  done
