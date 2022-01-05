@@ -21,17 +21,28 @@ function scan_for_jndi {
       continue
     fi
     if grep -q $pattern $jarfile; then
-      if grep -q $good_pattern $jarfile; then
-        echo "Fixed version of Log4j-core found in '$jarfile'"
+      if is_log4j_vulnerable $jarfile; then
+        echo "Vulnerable version $log4j_version of Log4j-core found in '$jarfile'"
       else
-        echo "Vulnerable version of Log4j-core found in '$jarfile'"
+        echo "Fixed version $log4j_version of Log4j-core found in '$jarfile'"
       fi
     fi
     # Is this jar in jar (uber-jars)?
     if unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' >/dev/null; then
       for inner in $(unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' | awk '{print $4}'); do
-        if unzip -p $jarfile $inner | grep -q JndiLookup.class; then
-          echo "Vulnerable version of Log4j-core found in inner '$inner' of '$jarfile'"
+        if unzip -p $jarfile $inner | grep -q $pattern; then
+            # Unzip the log4j jar to a temporary directory once JndiLookup is detected
+            rm -r -f $tmpdir/unzip_target
+            mkdir $tmpdir/unzip_target
+            unzip -qq $jarfile $inner -d $tmpdir/unzip_target
+            for log4j_jarfile in $(grep -r -l $pattern $tmpdir/unzip_target); do
+              if is_log4j_vulnerable $log4j_jarfile; then
+                echo "Vulnerable version $log4j_version of Log4j-core found in inner '$inner' of '$jarfile'"
+              else
+                echo "Fixed version $log4j_version of Log4j-core found in inner '$inner' of '$jarfile'"
+              fi
+            done
+            rm -r -f $tmpdir/unzip_target
         fi
       done
     fi
@@ -45,18 +56,13 @@ function scan_for_jndi {
     mkdir $tmpdir/unzip_target
     unzip -qq $warfile -d $tmpdir/unzip_target
 
-    found=0  # not found
-    for f in $(grep -r -l $pattern $tmpdir/unzip_target); do
-      found=1  # found vulnerable class
-      if grep -q $good_pattern $f; then
-        found=2  # found fixed class
+    for jarfile in $(grep -r -l $pattern $tmpdir/unzip_target); do
+      if is_log4j_vulnerable $jarfile; then
+        echo "Vulnerable version $log4j_version of Log4j-core found in '$warfile'"
+      else
+        echo "Fixed version $log4j_version of Log4j-core found in '$warfile'"
       fi
     done
-    if [ $found -eq 2 ]; then
-      echo "Fixed version of Log4j-core found in '$warfile'"
-    elif [ $found -eq 1 ]; then
-      echo "Vulnerable version of Log4j-core found in '$warfile'"
-    fi
     rm -r -f $tmpdir/unzip_target
   done
 
@@ -65,16 +71,47 @@ function scan_for_jndi {
       continue
     fi
     if zgrep -q $pattern $tarfile; then
-      if zgrep -q $good_pattern $tarfile; then
-        echo "Fixed version of Log4j-core found in '$tarfile'"
-      else
-        echo "Vulnerable version of Log4j-core found in '$tarfile'"
-      fi
+      rm -r -f $tmpdir/untar_target
+      mkdir $tmpdir/untar_target
+      tar xf "$tarfile" -C "$tmpdir/untar_target"
+      for jarfile in $(grep -r -l $pattern $tmpdir/untar_target); do
+        if is_log4j_vulnerable $jarfile; then
+          echo "Vulnerable version $log4j_version of Log4j-core found in '$tarfile'"
+        else
+          echo "Fixed version $log4j_version of Log4j-core found in '$tarfile'"
+        fi
+      done
+      rm -r -f $tmpdir/untar_target
     fi
   done
 
   echo "Scan complete"
 
+}
+
+function is_log4j_vulnerable {
+    # As a side note, we return 0 when the log4j-core jar is vulnerable.
+    local log4j_jar=$1
+    local log4j_pom_prop=$(unzip -l $log4j_jar | grep "log4j-core.*pom.properties" | awk '{print $4}'| head -1)
+    log4j_version=UNKNOWN
+    if [ -z $log4j_pom_prop ]; then
+      echo "Cannot find the pom.properties file in '$log4j_jar'. Failed to determine the version of log4j-core."
+      # As a fallback plan, try to find ClassArbiter.class
+      if grep -q $good_pattern $log4j_jar; then
+        echo "A good pattern is found in '$log4j_jar'. It is probably a fixed version."
+        return 1
+      else
+        return 0
+      fi
+    else
+      log4j_version=$(unzip -p $log4j_jar $log4j_pom_prop  | grep -i ^version | awk -F= '{print $2}')
+      if [[ $log4j_version =~ ^2\.([0-9]|(1[0-5]))\. ]]; then
+        # Any version between 2.0.* to 2.15.* is vulnerable.
+        return 0
+      else
+        return 1
+      fi
+    fi
 }
 
 
