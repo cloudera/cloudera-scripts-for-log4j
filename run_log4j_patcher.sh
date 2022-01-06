@@ -39,12 +39,14 @@ subcommand_usage() {
         -t <targetdir>          Override target directory (default: distro-specific)
         -b <backupdir>          Override backup directory (default: /opt/cloudera/log4shell-backup)
         -p <dell|ibm|common>    Override platform type (default: common)
+        -f <parcelfile>         Override <targetdir> with parcel path to scan for vulnerable libs. (Only CDH/CDP)
 
     Environment Variables:
         SKIP_JAR          If non-empty, skips scanning and patching .jar files
         SKIP_TGZ          If non-empty, skips scanning and patching .tar.gz files (cdh and cdp only)
         SKIP_HDFS         If non-empty, skips scanning and patching .tar.gz files in HDFS
         RUN_SCAN          If non-empty, runs a final scan for missed vulnerable files. This can take several hours.
+        EXIT_ON_FAIL      If non-empty, and if RUN_SCAN fails, script will exit with errcode 1.
 " 1>&2
 }
 
@@ -53,10 +55,11 @@ subcommand_cdh() {
     TARGETDIR=/opt/cloudera
     BACKUPDIR=/opt/cloudera/log4shell-backup
     PLATFORM="common"
+    PARCEL=""
 
     unset OPTIND OPTARG options
 
-    while getopts "t:b:p:" options
+    while getopts "t:b:p:f:" options
     do
         case ${options} in
             (t)
@@ -67,6 +70,9 @@ subcommand_cdh() {
                 ;;
             (p)
                 PLATFORM=${OPTARG}
+                ;;
+            (f)
+                PARCEL=${OPTARG}
                 ;;
             (?)
                 log_error "Invalid option ${OPTARG} passed .. "
@@ -83,7 +89,7 @@ subcommand_cdh() {
     log_info "Running CDH/CDP patcher script: $CDH_CDP_SCRIPT $TARGETDIR $BACKUPDIR $PLATFORM"
     logfile=$(mktemp output_run_log4j_patcher.XXXXXX)
     log_info "Log file: $logfile"
-    $CDH_CDP_SCRIPT "$TARGETDIR" "$BACKUPDIR" $PLATFORM | tee "$logfile" 2>&1
+    $CDH_CDP_SCRIPT "$TARGETDIR" "$BACKUPDIR" $PLATFORM $PARCEL | tee "$logfile" 2>&1
 
     log_info "Finished"
 }
@@ -91,6 +97,7 @@ subcommand_cdh() {
 subcommand_hdp() {
     TARGETDIR="/usr/hdp/current /usr/hdf/current /usr/lib /var/lib"
     BACKUPDIR=/opt/cloudera/log4shell-backup
+    PLATFORM="common"
 
     unset OPTIND OPTARG options
 

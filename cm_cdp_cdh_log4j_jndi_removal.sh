@@ -23,6 +23,7 @@ function scan_for_jndi {
     if grep -q $pattern $jarfile; then
       if is_log4j_vulnerable $jarfile; then
         echo "Vulnerable version $log4j_version of Log4j-core found in '$jarfile'"
+        exitcode=1
       else
         echo "Fixed version $log4j_version of Log4j-core found in '$jarfile'"
       fi
@@ -38,6 +39,7 @@ function scan_for_jndi {
             for log4j_jarfile in $(grep -r -l $pattern $tmpdir/unzip_target); do
               if is_log4j_vulnerable $log4j_jarfile; then
                 echo "Vulnerable version $log4j_version of Log4j-core found in inner '$inner' of '$jarfile'"
+                exitcode=1
               else
                 echo "Fixed version $log4j_version of Log4j-core found in inner '$inner' of '$jarfile'"
               fi
@@ -59,6 +61,7 @@ function scan_for_jndi {
     for jarfile in $(grep -r -l $pattern $tmpdir/unzip_target); do
       if is_log4j_vulnerable $jarfile; then
         echo "Vulnerable version $log4j_version of Log4j-core found in '$warfile'"
+        exitcode=1
       else
         echo "Fixed version $log4j_version of Log4j-core found in '$warfile'"
       fi
@@ -77,6 +80,7 @@ function scan_for_jndi {
       for jarfile in $(grep -r -l $pattern $tmpdir/untar_target); do
         if is_log4j_vulnerable $jarfile; then
           echo "Vulnerable version $log4j_version of Log4j-core found in '$tarfile'"
+          exitcode=1
         else
           echo "Fixed version $log4j_version of Log4j-core found in '$tarfile'"
         fi
@@ -95,10 +99,10 @@ function is_log4j_vulnerable {
     local log4j_pom_prop=$(unzip -l $log4j_jar | grep "log4j-core.*pom.properties" | awk '{print $4}'| head -1)
     log4j_version=UNKNOWN
     if [ -z $log4j_pom_prop ]; then
-      echo "Cannot find the pom.properties file in '$log4j_jar'. Failed to determine the version of log4j-core."
+      echo "pom.properties file is not found in '$log4j_jar'. Failed to determine the version of log4j-core."
       # As a fallback plan, try to find ClassArbiter.class
       if grep -q $good_pattern $log4j_jar; then
-        echo "A good pattern is found in '$log4j_jar'. It is probably a fixed version."
+        echo "Fallback to good pattern based search and a valid pattern is found in '$log4j_jar'. Hence log4j version is 2.16 or above."
         return 1
       else
         return 0
@@ -400,6 +404,7 @@ EOF
 targetdir=${1:-/opt/cloudera}
 backupdir=${2:-/opt/cloudera/log4shell-backup}
 platform=${3:-common}
+parcelfile=${4:-""}
 tmpdir=${TMPDIR:-/tmp} 
 mkdir -p $tmpdir
 echo "Using tmp directory '$tmpdir'"
@@ -476,7 +481,28 @@ else
   echo "Skipped patching .tar.gz in HDFS"
 fi
 
+exitcode=0
 if [ -n "$RUN_SCAN" ]; then
   echo "Running scan for missed JndiLookup classes. This may take a while."
-  scan_for_jndi $targetdir
+  if [ -n "$parcelfile" ]; then
+    # Override target-dir with parcel-file path.
+    echo "Override targetdir='$targetdir' as -f option set parcelfile to '$parcelfile'"
+    parceldir=$(mktemp -d)
+   
+    now=$(date +"%T")
+    echo "Start to unpack the parcelfile at $now"
+    tar zxf $parcelfile -C "$parceldir"
+    now=$(date +"%T")
+    echo "Completed unpacking the parcelfile and start scanning at $now"
+
+    scan_for_jndi $parceldir
+    now=$(date +"%T")
+    echo "Completed scan at $now"
+    rm -rf $parceldir
+    if [ -n "$EXIT_ON_FAIL" ]; then
+      exit $exitcode
+    fi
+  else
+    scan_for_jndi $targetdir
+  fi
 fi
