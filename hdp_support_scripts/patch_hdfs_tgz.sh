@@ -15,9 +15,10 @@ BASEDIR=$(dirname "$0")
 
 hdfs_path=$1
 keytab=$2
+backupdir=$3
 
-if [ ! "$#" -eq 2 ]; then
-	echo "Invalid arguements. The argument must be an HDFS directory and valid keytab file."
+if [ ! "$#" -eq 3 ]; then
+	echo "Invalid arguements. The arguments must be an HDFS directory, a valid keytab file and a backupdir."
 	exit 1
 fi
 
@@ -78,7 +79,7 @@ do
 	  touch -d "$d" $local_path/mark
 	  touch -d "$d" $local_path/*
 	  
-	  $delete_jndi $local_path
+	  $delete_jndi $local_path $backupdir
 	  
 	  changed=()
 	  for f in $(ls $local_path); do
@@ -126,7 +127,7 @@ do
 			local_full_path="${local_path}/${f}"
 
 			echo "Executing the log4j removal script"
-			$patch_tgz $local_full_path
+			$patch_tgz $local_full_path $backupdir
 
 			echo "Completed executing log4j removal script and uploading $f to $hdfs_file_path"
 			$user_option hdfs dfs -copyFromLocal -f $local_full_path $hdfs_file_path/$f

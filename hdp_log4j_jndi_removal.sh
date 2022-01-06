@@ -41,8 +41,8 @@ if [ -z "$SKIP_HDFS" ]; then
       echo "Found an HDFS namenode on this host, removing JNDI from HDFS tar.gz files for platform='$platform'"
       keytab_file="hdfs.headless.keytab"
       keytab=$(find /etc/security/keytabs/ -type f -iname $keytab_file |tail -1)
-      $BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/hdp/apps/" $keytab
-      $BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/user/" $keytab
+      $BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/hdp/apps/" $keytab $2
+      $BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/user/" $keytab $2
     fi
   elif [ $platform == "dell" ]; then
     if ps -efww | grep org.apache.hadoop.yarn.server.resourcemanager.ResourceManager | grep -v grep  1>/dev/null 2>&1; then
@@ -52,8 +52,8 @@ if [ -z "$SKIP_HDFS" ]; then
       if [[ -z "$keytab" || ! -s $keytab ]]; then
         echo "If this is a secure cluster, please ensure that /etc/security/keytabs/hdfs.headless.keytab is present for DELL."
       fi
-      $BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/hdp/apps/" $keytab
-      $BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/user/" $keytab
+      $BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/hdp/apps/" $keytab $2
+      $BASEDIR/hdp_support_scripts/patch_hdfs_tgz.sh "/user/" $keytab $2
     fi
   fi
 else
