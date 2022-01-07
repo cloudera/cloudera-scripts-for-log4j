@@ -1,0 +1,76 @@
+# Ansible playbook to automate the deployment and running of Cloudera's Log4j patch/script on a cluster
+#
+# Author:  Laurent Hoss (Scigility.com)
+# License: Apache License 2.0
+#
+# Notes:
+# - First please read Cloudera's README.md
+# - Requires packages/rpms installed on all nodes: zip,unzip
+# - Before running it, set the ansible vars below to match your Env, in particular the script's cmdline
+# - For simplicity, I decided to create a single self-contained playbook, instead of a cleaner ansible role (with the vars in the defaults etc)
+#   - On demand, I'm happy to refactor this into a role
+# - Also: It would have been cleaner & easier to use a different repo/folder for the deployment logic,
+#     so we could (recursively) install the files in this repo to the target nodes (w/out ansible files)
+---
+- hosts: all
+  become: yes
+  gather_facts: no
+  serial: "{{ serial | default(0) | int }}"
+  vars:
+    log4j_patcher_install_dir: /opt/cloudera_log4j_patcher
+    log4j_patcher_log_dir: "{{ log4j_patcher_install_dir }}"
+    log4j_patcher_script_name: run_log4j_patcher.sh
+    # TODO: before running, set the right args
+    log4j_patcher_script_args: "cdp -t /opt/cloudera"
+    # If 'True', the scripts stdout&stderr are redirected to a log file (in the dir given by the var `log4j_patcher_log_dir`)
+    script_redirect_stdout_to_file: False 
+    script_async_sec: 14400  # set max. allowed running time of script to 4h
+    script_poll_sec: 10      # set the poll time in seconds
+    log4j_patcher_script_env:
+      SKIP_JAR: ""     # If non-empty, skips scanning and patching .jar files
+      SKIP_TGZ: ""     # If non-empty, skips scanning and patching .tar.gz files
+      SKIP_HDFS: ""    # If non-empty, skips scanning and patching .tar.gz files in HDFS
+      RUN_SCAN: ""     # If non-empty, runs a final scan for missed vulnerable files. This can take several hours.
+
+  tasks:
+    # Install tasks
+    - block:
+      - name: Ensure the install dir exists
+        file: 
+          state: directory
+          path: "{{ log4j_patcher_install_dir }}"
+
+      - name: Deploying the script files
+        copy:
+          src: "{{ item }}"
+          dest: "{{ log4j_patcher_install_dir }}/"
+          # Explicitly set the execute permission to be sure
+          mode: "u+x"
+        with_fileglob: "*.sh"
+
+      - name: Deploy any helper sub dirs (or other files)
+        copy:
+          src: "{{ item }}"
+          dest: "{{ log4j_patcher_install_dir }}/"
+        with_items:
+          - hdp_support_scripts
+      tags:
+        - install
+      
+    # Run tasks
+    - block:
+      - set_fact:
+          run_cmd_postfix: ">> {{ log4j_patcher_log_dir }}/{{ log4j_patcher_script_name }}.log 2>&1"
+        when: script_redirect_stdout_to_file
+
+      - name: run script {{ log4j_patcher_script_name }}
+        shell: "./{{ log4j_patcher_script_name }} {{ log4j_patcher_script_args }} {{ run_cmd_postfix | default('') }}"
+        async: "{{ script_async_sec }}"  # Maximum allowed time in Seconds
+        poll: "{{ script_poll_sec }}"    # Polling Interval in Seconds
+        register: run_script_result
+        args:
+          chdir: "{{ log4j_patcher_install_dir }}"
+        environment: "{{ log4j_patcher_script_env }}"
+      # Note: Alternatively we could run with poll=0 and add a `async_status` task here
+      tags:
+        - run
