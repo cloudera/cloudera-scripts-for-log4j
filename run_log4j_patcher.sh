@@ -47,6 +47,7 @@ subcommand_usage() {
         SKIP_HDFS         If non-empty, skips scanning and patching .tar.gz files in HDFS
         RUN_SCAN          If non-empty, runs a final scan for missed vulnerable files. This can take several hours.
         EXIT_ON_FAIL      If non-empty, and if RUN_SCAN fails, script will exit with errcode 1.
+        LOG4J_VERSION     If non-empty, and configured as 2.17.1, it will scan and fail if older version of log4j is found.
 " 1>&2
 }
 

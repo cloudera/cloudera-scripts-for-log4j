@@ -98,6 +98,12 @@ function is_log4j_vulnerable {
     local log4j_jar=$1
     local log4j_pom_prop=$(unzip -l $log4j_jar | grep "log4j-core.*pom.properties" | awk '{print $4}'| head -1)
     log4j_version=UNKNOWN
+    log4j_pattern="^2\.([0-9]|(1[0-5]))\."
+    if [ -z "$LOG4J_VERSION" ]; then
+      if [ $LOG4J_VERSION == "2.17.1" ]; then
+        log4j_pattern="^2\.([0-9]|(1[0-6]))\."
+      fi
+    fi
     if [ -z $log4j_pom_prop ]; then
       echo "pom.properties file is not found in '$log4j_jar'. Failed to determine the version of log4j-core."
       # As a fallback plan, try to find ClassArbiter.class
@@ -109,7 +115,7 @@ function is_log4j_vulnerable {
       fi
     else
       log4j_version=$(unzip -p $log4j_jar $log4j_pom_prop  | grep -i ^version | awk -F= '{print $2}')
-      if [[ $log4j_version =~ ^2\.([0-9]|(1[0-5]))\. ]]; then
+      if [[ $log4j_version =~ $log4j_pattern ]]; then
         # Any version between 2.0.* to 2.15.* is vulnerable.
         return 0
       else
