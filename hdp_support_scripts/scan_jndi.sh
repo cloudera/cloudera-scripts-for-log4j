@@ -79,7 +79,7 @@ do
 
 	if zgrep -q $pattern $tarfile; then
 		if zgrep -q $pattern_15 $tarfile; then
-			if zgrep -q $pattern_16 $jarfile; then
+			if zgrep -q $pattern_16 $tarfile; then
 				echo "Fixed **2.15** version of Log4j-core found in '$tarfile'"
 			else
 				echo "Fixed 2.16 version of Log4j-core found in '$tarfile'"
