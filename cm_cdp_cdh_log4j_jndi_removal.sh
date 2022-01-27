@@ -99,7 +99,7 @@ function is_log4j_vulnerable {
     local log4j_pom_prop=$(unzip -l $log4j_jar | grep "log4j-core.*pom.properties" | awk '{print $4}'| head -1)
     log4j_version=UNKNOWN
     log4j_pattern="^2\.([0-9]|(1[0-5]))\."
-    if [ -z "$LOG4J_VERSION" ]; then
+    if [ -n "$LOG4J_VERSION" ]; then
       if [ $LOG4J_VERSION == "2.17.1" ]; then
         log4j_pattern="^2\.([0-9]|(1[0-6]))\."
       fi
@@ -505,10 +505,10 @@ if [ -n "$RUN_SCAN" ]; then
     now=$(date +"%T")
     echo "Completed scan at $now"
     rm -rf $parceldir
-    if [ -n "$EXIT_ON_FAIL" ]; then
-      exit $exitcode
-    fi
   else
     scan_for_jndi $targetdir
+  fi
+  if [ -n "$EXIT_ON_FAIL" ]; then
+    exit $exitcode
   fi
 fi
