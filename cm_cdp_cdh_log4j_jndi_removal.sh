@@ -100,7 +100,7 @@ function is_log4j_vulnerable {
     log4j_version=UNKNOWN
     log4j_pattern="^2\.([0-9]|(1[0-5]))\."
     if [ -n "$LOG4J_VERSION" ]; then
-      if [ $LOG4J_VERSION == "2.17.1" ]; then
+      if [[ $LOG4J_VERSION == "2.17.1" ]]; then
         log4j_pattern="^2\.([0-9]|(1[0-6]))\."
       fi
     fi
