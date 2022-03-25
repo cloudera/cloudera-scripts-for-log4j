@@ -16,6 +16,13 @@ function scan_for_jndi {
   pattern=JndiLookup.class
   good_pattern=ClassArbiter.class
 
+  if [ -n "$LOG4J_VERSION" ]; then
+    if [[ $LOG4J_VERSION == "1.x" ]]; then
+        pattern=JMSAppender.class
+        good_pattern="y1y2y3"
+    fi
+  fi
+
   for jarfile in $(find -L $targetdir -name "*.jar" -o -name "*.tar"); do
     if [ -L  "$jarfile" ]; then
       continue
@@ -102,8 +109,12 @@ function is_log4j_vulnerable {
     if [ -n "$LOG4J_VERSION" ]; then
       if [[ $LOG4J_VERSION == "2.17.1" ]]; then
         log4j_pattern="^2\.([0-9]|(1[0-6]))\."
+      elif [ $LOG4J_VERSION == "1.x" ]; then
+        log4j_pom_prop=$(unzip -l $log4j_jar | grep "log4j.*pom.properties" | awk '{print $4}'| head -1)
+        log4j_pattern="^1\.([0-9]|(1[0-8]))\."
       fi
     fi
+
     if [ -z $log4j_pom_prop ]; then
       echo "pom.properties file is not found in '$log4j_jar'. Failed to determine the version of log4j-core."
       # As a fallback plan, try to find ClassArbiter.class
@@ -135,11 +146,19 @@ function delete_jndi_from_jar_files {
   mkdir -p "$backupdir"
   echo "Backing up files to '$backupdir'"
 
+  pattern=JndiLookup.class
+
+  if [ -n "$LOG4J_VERSION" ]; then
+    if [[ $LOG4J_VERSION == "1.x" ]]; then
+        pattern=JMSAppender.class
+    fi
+  fi
+
   for jarfile in $(find -L $targetdir -name "*.jar"); do
     if [ -L  "$jarfile" ]; then
       continue
     fi
-    if grep -q JndiLookup.class $jarfile; then
+    if grep -q $pattern $jarfile; then
       # Backup file only if backup doesn't already exist
       mkdir -p "$backupdir/$(dirname $jarfile)"
       local targetbackup="$backupdir/$jarfile.backup"
@@ -155,11 +174,11 @@ function delete_jndi_from_jar_files {
       _sha256sum_backup=$(sha256sum ${targetbackup} | awk -F' '  '{print $1}')
       if [ "${_sha256sum_org}" = "${_sha256sum_backup}" ] ; then
         # Rip out class
-        echo "Deleting JndiLookup.class from '$jarfile'"
-        zip -q -d "$jarfile" */JndiLookup.class
+        echo "Deleting $pattern from '$jarfile'"
+        zip -q -d "$jarfile" */$pattern
       else
         echo "Backup of file ${jarfile} doesn't match ${targetbackup}"
-        echo "NOT removing JndiLookup.class from ${jarfile}"
+        echo "NOT removing $pattern from ${jarfile}"
         exit 1
       fi
     fi
@@ -167,7 +186,7 @@ function delete_jndi_from_jar_files {
     # Is this jar in jar (uber-jars)?
     if unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' >/dev/null; then
       for inner in $(unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' | awk '{print $4}'); do
-        if unzip -p $jarfile $inner | grep -q JndiLookup.class; then
+        if unzip -p $jarfile $inner | grep -q $pattern; then
 
           # Backup file only if backup doesn't already exist
           mkdir -p "$backupdir/$(dirname $jarfile)"
@@ -182,8 +201,8 @@ function delete_jndi_from_jar_files {
           TMP_DIR=$(mktemp -d)
           pushd $TMP_DIR
           unzip -q $jarfile $inner
-          echo "Deleting JndiLookup.class in nested jar $inner of $jarfile"
-          zip -q -d $inner \*/JndiLookup.class
+          echo "Deleting $pattern in nested jar $inner of $jarfile"
+          zip -q -d $inner \*/$pattern
           zip -qur $jarfile .
           popd
           rm -rf $TMP_DIR
@@ -194,7 +213,7 @@ function delete_jndi_from_jar_files {
 
   echo "Completed removing JNDI from jar files"
 
-  for narfile in $(find -L $targetdir -name "*.nar"); do
+  for narfile in $(find -L $targetdir -name "*.war" -o -name "*.nar"); do
     if [ -L  "$narfile" ]; then
       continue
     fi
@@ -207,7 +226,7 @@ function delete_jndi_from_jar_files {
       if [ -L  "$jarfile" ]; then
         continue
       fi
-      if grep -q JndiLookup.class $jarfile; then
+      if grep -q $pattern $jarfile; then
 
         # Backup file only if backup doesn't already exist
         mkdir -p "$backupdir/$(dirname $jarfile)"
@@ -218,8 +237,8 @@ function delete_jndi_from_jar_files {
         fi
 
         # Rip out class
-        echo "Deleting JndiLookup.class from '$jarfile'"
-        zip -q -d "$jarfile" \*/JndiLookup.class
+        echo "Deleting $pattern from '$jarfile'"
+        zip -q -d "$jarfile" \*/$pattern
         doZip=1
       fi
     done
