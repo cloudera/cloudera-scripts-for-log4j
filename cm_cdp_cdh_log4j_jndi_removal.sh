@@ -154,7 +154,7 @@ function delete_jndi_from_jar_files {
   mkdir -p "$backupdir"
   echo "Backing up files to '$backupdir'"
 
-  patterns=JndiLookup.class
+  patterns=(JndiLookup.class)
 
   if [ -n "$LOG4J_VERSION" ]; then
     if [[ $LOG4J_VERSION == "1.x" ]]; then
