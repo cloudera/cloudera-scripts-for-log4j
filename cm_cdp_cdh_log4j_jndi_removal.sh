@@ -13,12 +13,12 @@ function scan_for_jndi {
   local targetdir=${1:-/opt/cloudera}
   echo "Running on '$targetdir'"
 
-  pattern=JndiLookup.class
+  patterns=(JndiLookup.class)
   good_pattern=ClassArbiter.class
 
   if [ -n "$LOG4J_VERSION" ]; then
     if [[ $LOG4J_VERSION == "1.x" ]]; then
-        pattern=JMSAppender.class
+        patterns=(JMSAppender.class SocketAppender.class SMTPAppender.class JDBCAppender.class)
         good_pattern="y1y2y3"
     fi
   fi
@@ -27,32 +27,36 @@ function scan_for_jndi {
     if [ -L  "$jarfile" ]; then
       continue
     fi
-    if grep -q $pattern $jarfile; then
-      if is_log4j_vulnerable $jarfile; then
-        echo "Vulnerable version $log4j_version of Log4j-core found in '$jarfile'"
-        exitcode=1
-      else
-        echo "Fixed version $log4j_version of Log4j-core found in '$jarfile'"
+    for pattern in "${patterns[@]}"; do
+      if grep -q $pattern $jarfile; then
+        if is_log4j_vulnerable $jarfile; then
+          echo "Vulnerable version $log4j_version ($pattern) of Log4j-core found in '$jarfile'"
+          exitcode=1
+        else
+          echo "Fixed version $log4j_version of Log4j-core found in '$jarfile'"
+        fi
       fi
-    fi
+    done
     # Is this jar in jar (uber-jars)?
     if unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' >/dev/null; then
       for inner in $(unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' | awk '{print $4}'); do
-        if unzip -p $jarfile $inner | grep -q $pattern; then
-            # Unzip the log4j jar to a temporary directory once JndiLookup is detected
-            rm -r -f $tmpdir/unzip_target
-            mkdir $tmpdir/unzip_target
-            unzip -qq $jarfile $inner -d $tmpdir/unzip_target
-            for log4j_jarfile in $(grep -r -l $pattern $tmpdir/unzip_target); do
-              if is_log4j_vulnerable $log4j_jarfile; then
-                echo "Vulnerable version $log4j_version of Log4j-core found in inner '$inner' of '$jarfile'"
-                exitcode=1
-              else
-                echo "Fixed version $log4j_version of Log4j-core found in inner '$inner' of '$jarfile'"
-              fi
-            done
-            rm -r -f $tmpdir/unzip_target
-        fi
+        for pattern in "${patterns[@]}"; do
+          if unzip -p $jarfile $inner | grep -q $pattern; then
+              # Unzip the log4j jar to a temporary directory once JndiLookup is detected
+              rm -r -f $tmpdir/unzip_target
+              mkdir $tmpdir/unzip_target
+              unzip -qq $jarfile $inner -d $tmpdir/unzip_target
+              for log4j_jarfile in $(grep -r -l $pattern $tmpdir/unzip_target); do
+                if is_log4j_vulnerable $log4j_jarfile; then
+                  echo "Vulnerable version $log4j_version ($pattern) of Log4j-core found in inner '$inner' of '$jarfile'"
+                  exitcode=1
+                else
+                  echo "Fixed version $log4j_version of Log4j-core found in inner '$inner' of '$jarfile'"
+                fi
+              done
+              rm -r -f $tmpdir/unzip_target
+          fi
+        done
       done
     fi
   done
@@ -65,13 +69,15 @@ function scan_for_jndi {
     mkdir $tmpdir/unzip_target
     unzip -qq $warfile -d $tmpdir/unzip_target
 
-    for jarfile in $(grep -r -l $pattern $tmpdir/unzip_target); do
-      if is_log4j_vulnerable $jarfile; then
-        echo "Vulnerable version $log4j_version of Log4j-core found in '$warfile'"
-        exitcode=1
-      else
-        echo "Fixed version $log4j_version of Log4j-core found in '$warfile'"
-      fi
+    for pattern in "${patterns[@]}"; do
+      for jarfile in $(grep -r -l $pattern $tmpdir/unzip_target); do
+        if is_log4j_vulnerable $jarfile; then
+          echo "Vulnerable version $log4j_version ($pattern) of Log4j-core found in '$warfile'"
+          exitcode=1
+        else
+          echo "Fixed version $log4j_version of Log4j-core found in '$warfile'"
+        fi
+      done
     done
     rm -r -f $tmpdir/unzip_target
   done
@@ -80,20 +86,22 @@ function scan_for_jndi {
     if [ -L  "$tarfile" ]; then
       continue
     fi
-    if zgrep -q $pattern $tarfile; then
-      rm -r -f $tmpdir/untar_target
-      mkdir $tmpdir/untar_target
-      tar xf "$tarfile" -C "$tmpdir/untar_target"
-      for jarfile in $(grep -r -l $pattern $tmpdir/untar_target); do
-        if is_log4j_vulnerable $jarfile; then
-          echo "Vulnerable version $log4j_version of Log4j-core found in '$tarfile'"
-          exitcode=1
-        else
-          echo "Fixed version $log4j_version of Log4j-core found in '$tarfile'"
-        fi
-      done
-      rm -r -f $tmpdir/untar_target
-    fi
+    for pattern in "${patterns[@]}"; do
+      if zgrep -q $pattern $tarfile; then
+        rm -r -f $tmpdir/untar_target
+        mkdir $tmpdir/untar_target
+        tar xf "$tarfile" -C "$tmpdir/untar_target"
+        for jarfile in $(grep -r -l $pattern $tmpdir/untar_target); do
+          if is_log4j_vulnerable $jarfile; then
+            echo "Vulnerable version $log4j_version ($pattern) of Log4j-core found in '$tarfile'"
+            exitcode=1
+          else
+            echo "Fixed version $log4j_version of Log4j-core found in '$tarfile'"
+          fi
+        done
+        rm -r -f $tmpdir/untar_target
+      fi
+    done
   done
 
   echo "Scan complete"
@@ -146,67 +154,81 @@ function delete_jndi_from_jar_files {
   mkdir -p "$backupdir"
   echo "Backing up files to '$backupdir'"
 
-  pattern=JndiLookup.class
+  patterns=JndiLookup.class
 
   if [ -n "$LOG4J_VERSION" ]; then
     if [[ $LOG4J_VERSION == "1.x" ]]; then
-        pattern=JMSAppender.class
+        patterns=(JMSAppender.class SocketAppender.class SMTPAppender.class JDBCAppender.class)
     fi
   fi
 
   for jarfile in $(find -L $targetdir -name "*.jar"); do
+    multipleDeletes=0
     if [ -L  "$jarfile" ]; then
       continue
     fi
-    if grep -q $pattern $jarfile; then
-      # Backup file only if backup doesn't already exist
-      mkdir -p "$backupdir/$(dirname $jarfile)"
-      local targetbackup="$backupdir/$jarfile.backup"
-      if [ ! -f "$targetbackup" ]; then
-        echo "Backing up to '$targetbackup'"
-        cp -f "$jarfile" "$targetbackup"
-      else
-        echo "Backup file exists: ${targetbackup} - skipping backup"
-      fi
+    for pattern in "${patterns[@]}"; do
+      if grep -q $pattern $jarfile; then
+        # set multipleDeletes variable to 1 so that when one more pattern is detected, we can avoid 
+        # checksum verifications.
+        multipleDeletes=1
+        # Backup file only if backup doesn't already exist
+        mkdir -p "$backupdir/$(dirname $jarfile)"
+        local targetbackup="$backupdir/$jarfile.backup"
+        if [ ! -f "$targetbackup" ]; then
+          echo "Backing up to '$targetbackup'"
+          cp -f "$jarfile" "$targetbackup"
+        else
+          echo "Backup file exists: ${targetbackup} - skipping backup"
+        fi
 
-      # Check the backup matches the original before altering it
-      _sha256sum_org=$(sha256sum ${jarfile} | awk -F' '  '{print $1}')
-      _sha256sum_backup=$(sha256sum ${targetbackup} | awk -F' '  '{print $1}')
-      if [ "${_sha256sum_org}" = "${_sha256sum_backup}" ] ; then
-        # Rip out class
-        echo "Deleting $pattern from '$jarfile'"
-        zip -q -d "$jarfile" */$pattern
-      else
-        echo "Backup of file ${jarfile} doesn't match ${targetbackup}"
-        echo "NOT removing $pattern from ${jarfile}"
-        exit 1
+        # Check the backup matches the original before altering it
+        if [ 1 -eq $multipleDeletes ]; then
+            # Rip out class without doing checksum as we already deleted some other vulnarable classes
+            echo "Deleting $pattern from '$jarfile'"
+            zip -q -d "$jarfile" */$pattern
+        else
+          _sha256sum_org=$(sha256sum ${jarfile} | awk -F' '  '{print $1}')
+          _sha256sum_backup=$(sha256sum ${targetbackup} | awk -F' '  '{print $1}')
+          if [ "${_sha256sum_org}" = "${_sha256sum_backup}" ] ; then
+            # Rip out class
+            echo "Deleting $pattern from '$jarfile'"
+            zip -q -d "$jarfile" */$pattern
+          else
+            echo "Backup of file ${jarfile} doesn't match ${targetbackup}"
+            echo "NOT removing $pattern from ${jarfile}"
+            exit 1
+          fi
+        fi
       fi
-    fi
+    done
 
     # Is this jar in jar (uber-jars)?
     if unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' >/dev/null; then
-      for inner in $(unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' | awk '{print $4}'); do
-        if unzip -p $jarfile $inner | grep -q $pattern; then
+      for pattern in "${patterns[@]}"; do
+        for inner in $(unzip -l $jarfile | grep -v 'Archive:' | grep '\.jar$' | awk '{print $4}'); do
+          if unzip -p $jarfile $inner | grep -q $pattern; then
 
-          # Backup file only if backup doesn't already exist
-          mkdir -p "$backupdir/$(dirname $jarfile)"
-          local targetbackup="$backupdir/$jarfile.backup"
-          if [ ! -f "$targetbackup" ]; then
-            echo "Backing up to '$targetbackup'"
-            cp -f "$jarfile" "$targetbackup"
-          else
-            echo "Backup file exists: ${targetbackup} - skipping backup"
+            # Backup file only if backup doesn't already exist
+            mkdir -p "$backupdir/$(dirname $jarfile)"
+            local targetbackup="$backupdir/$jarfile.backup"
+            if [ ! -f "$targetbackup" ]; then
+              echo "Backing up to '$targetbackup'"
+              cp -f "$jarfile" "$targetbackup"
+            else
+              echo "Backup file exists: ${targetbackup} - skipping backup"
+            fi
+
+            TMP_DIR=$(mktemp -d)
+            pushd $TMP_DIR
+            unzip -q $jarfile $inner
+            echo "Deleting $pattern in nested jar $inner of $jarfile"
+            zip -q -d $inner \*/$pattern
+            zip -qur $jarfile .
+            popd
+            rm -rf $TMP_DIR
           fi
-
-          TMP_DIR=$(mktemp -d)
-          pushd $TMP_DIR
-          unzip -q $jarfile $inner
-          echo "Deleting $pattern in nested jar $inner of $jarfile"
-          zip -q -d $inner \*/$pattern
-          zip -qur $jarfile .
-          popd
-          rm -rf $TMP_DIR
-        fi
+        done
       done
     fi
   done
@@ -226,21 +248,23 @@ function delete_jndi_from_jar_files {
       if [ -L  "$jarfile" ]; then
         continue
       fi
-      if grep -q $pattern $jarfile; then
+      for pattern in "${patterns[@]}"; do
+        if grep -q $pattern $jarfile; then
 
-        # Backup file only if backup doesn't already exist
-        mkdir -p "$backupdir/$(dirname $jarfile)"
-        targetbackup="$backupdir/$jarfile.backup"
-        if [ ! -f "$targetbackup" ]; then
-          echo "Backing up to '$targetbackup'"
-          cp -f "$jarfile" "$targetbackup"
+          # Backup file only if backup doesn't already exist
+          mkdir -p "$backupdir/$(dirname $jarfile)"
+          targetbackup="$backupdir/$jarfile.backup"
+          if [ ! -f "$targetbackup" ]; then
+            echo "Backing up to '$targetbackup'"
+            cp -f "$jarfile" "$targetbackup"
+          fi
+
+          # Rip out class
+          echo "Deleting $pattern from '$jarfile'"
+          zip -q -d "$jarfile" \*/$pattern
+          doZip=1
         fi
-
-        # Rip out class
-        echo "Deleting $pattern from '$jarfile'"
-        zip -q -d "$jarfile" \*/$pattern
-        doZip=1
-      fi
+      done
     done
 
     if [ 1 -eq $doZip ]; then
