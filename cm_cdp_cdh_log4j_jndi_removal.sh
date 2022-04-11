@@ -487,9 +487,15 @@ fi
 
 if [ -z "$SKIP_TGZ" ]; then
   echo "Removing JNDI from tar.gz files"
+  log4jpattern=JndiLookup.class
+  if [ -n "$LOG4J_VERSION" ]; then
+    if [[ $LOG4J_VERSION == "1.x" ]]; then
+      log4jpattern=JMSAppender.class
+    fi
+  fi
   for targzfile in $(find -L $targetdir -name '*.tar.gz') ; do
-    if zgrep -q JndiLookup.class $targzfile; then
-      echo "JndiLookup.class found in $targzfile, repacking"
+    if zgrep -q $log4jpattern $targzfile; then
+      echo "$log4jpattern found in $targzfile, repacking"
       delete_jndi_from_targz_file $targzfile $backupdir
     fi
   done
