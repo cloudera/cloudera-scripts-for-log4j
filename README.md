@@ -50,6 +50,8 @@ run_log4j_patcher.sh automatically.
         SKIP_HDFS         If non-empty, skips scanning and patching .tar.gz files in HDFS
         RUN_SCAN          If non-empty, runs a final scan for missed vulnerable files. This can take several hours.
         TMPDIR            If non-empty, uses /tmp as the temporary directory. Set a different temporary directory using this.
+        LOG4J_VERSION     If non-empty, runs scan or removal of vulnerable classes from specific log4j version. For eg: "LOG4J_VERSION=1.x"
+        EXIT_ON_FAIL      If non-empty, exit with non-zero error code if any vulnerabilities were found. Script will return zero, if there are no vulnerabilities.
 ```
 Example : 
 1. Run scan without patching jar, tar, and HDFS.
@@ -70,5 +72,12 @@ NOTE: For IBM Power PC with HDFS clusters, '-p ibm' option is NOT required. Defa
 ./run_log4j_patcher.sh [cdp|cdh|hdp|hdf] -p dell
 NOTE: HDFS keytab is mandatory to run the script for DELL Secure clusters. Script expects HDFS headless keytab in '/etc/security/keytabs/hdfs.headless.keytab' path.
 ```
-
+5. Run scan without patching jar, tar, and HDFS for log4j1.
+```
+LOG4J_VERSION=1.x SKIP_JAR=1 SKIP_TGZ=1 SKIP_HDFS=1 RUN_SCAN=1 ./run_log4j_patcher.sh [cdp|cdh|hdp|hdf]
+```
+6. Run lo4j vulnarable class removal script for log4j1
+```
+LOG4J_VERSION=1.x ./run_log4j_patcher.sh [cdp|cdh|hdp|hdf]
+```
 HDP Notes : Currently the HDP removal scrips works on folder `/user/`  on HDFS. Please modify/extent in The `hdp_log4j_jndi_removal.sh` around `line 57`.
